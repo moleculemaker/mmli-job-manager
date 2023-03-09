@@ -26,8 +26,10 @@ TEST SUITE: None
     # Optionally follow logs:
     docker compose logs -f
     ```
-1. In a separate terminal, use the test script to launch a job:
+1. In a separate terminal, open a terminal in the container and use the test script to launch a job:
     ```bash
+    $ docker compose exec -it app bash
+
     worker@c46604b1361d:~/src$ cd ~/test/
 
     worker@c46604b1361d:~/test$ python3 job_cannon.py --num 5
