@@ -1,0 +1,4 @@
+apiVersion: v2
+description: "Job manager"
+name: job-manager
+version: 1.0.0

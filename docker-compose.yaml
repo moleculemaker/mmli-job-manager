@@ -1,0 +1,40 @@
+version: '3'
+
+networks:
+  internal:
+    external: false
+
+volumes:
+  db: {}
+
+services:
+  db:
+    image: bitnami/mariadb:10.5
+    container_name: api-server-db
+    env_file: .env
+    restart: unless-stopped
+    networks:
+      - internal
+    volumes:
+      - db:/var/lib/mysql
+  app:
+    image: mmli-job-manager:dev
+    container_name: api-server
+    build:
+      context: .
+    env_file: .env
+    depends_on:
+      - db
+    ports:
+      - 8888:8888
+    restart: unless-stopped
+    networks:
+      - internal
+    command:
+      - '/bin/bash'
+      - '-c'
+      - python main.py
+    volumes:
+      - ./config:/etc/config:ro
+      - ./kubeconfig:/opt/kubeconfig:ro
+      # - ./src:/home/worker/src:ro

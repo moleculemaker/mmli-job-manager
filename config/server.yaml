@@ -1,0 +1,63 @@
+server:
+  protocol: "http"
+  port: 8888
+  debug: true
+  ## API basepath. Must match an ingress in the ingress.basepaths list.
+  apiBasePath: "api/v1"
+  basePath: ""
+  ## API hostname. Must match the ingress.hostname value.
+  hostName: "localhost"
+  logLevel: "DEBUG"
+  kubeconfig: ""
+  namespace: "job-manager"
+db:
+  host: ""
+  user: ""
+  pass: ""
+  database: ""
+uws:
+  job:
+    monitorEnabled: false
+    imageJobMonitor:
+      repository: ""
+      tag: ""
+      pullPolicy: "Always"
+    image:
+      repository: "ubuntu"
+      tag: "22.04"
+      pullPolicy: "IfNotPresent"
+      ## Image pull secrets if necessary
+      # pullSecrets:
+      # - name: my-secret
+      pullSecrets: []
+    ## Abort jobs after 3 days regardless of their behavior
+    activeDeadlineSeconds: 259200
+    ## Poll the log file for changes every `logFilePollingPeriod` seconds
+    logFilePollingPeriod: 300
+    ## CAUTION: Discrepancy between the UID of the image user and the mmli API server UID
+    ##          will create permissions problems. For example, if the job UID is 1001 and
+    ##          the server UID is 1000, then files created by the job will not in general
+    ##          allow the server to delete them when cleaning up deleted jobs.
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      # fsGroup: 202
+    resources:
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+      requests:
+        cpu: "0.5"
+        memory: "100Mi"
+  ## Server working directory to store generated job data
+  workingVolume:
+    claimName: "uws-working-volume"
+    mountPath: "/uws"
+    subPath: "uws"
+  ## Central data volumes to be mounted in job containers
+  volumes: []
+  # - name: data
+  #   claimName: mmli-data-pvc
+  #   mountPath: "/data/mmli"
+  #   subPath: ""
+  #   readOnly: true
