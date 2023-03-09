@@ -28,7 +28,12 @@ TEST SUITE: None
     ```
 1. In a separate terminal, use the test script to launch a job:
     ```bash
-    python job_cannon.py --num 5
+    worker@c46604b1361d:~/src$ cd ~/test/
+
+    worker@c46604b1361d:~/test$ python3 job_cannon.py --num 5
+    Submitting new MMLI job (job_config.yaml)...
+    Job "970d69983e8c46deb0fbb301a4bdf77c" created.
+    ...
     ```
 1. List the job pods and view their log output:
     ```bash
@@ -63,3 +68,12 @@ TEST SUITE: None
     |  4 | 076baf20ebc540c08a5375ece33a78c6 | 2023-03-09 18:35:53 |
     ...
     ```
+
+## Configuration
+
+If you want to override the configuration set in `config/server.yaml` without modifying that file, you can create `config/secret.yaml` (which is in `.gitignore`). For example to override the log level you would populate `config/secret.yaml` with the following:
+
+```yaml
+server:
+  logLevel: "INFO"
+```
