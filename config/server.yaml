@@ -8,7 +8,7 @@ server:
   ## API hostname. Must match the ingress.hostname value.
   hostName: "localhost"
   logLevel: "DEBUG"
-  kubeconfig: ""
+  kubeconfig: "/opt/kubeconfig"
   namespace: "job-manager"
 db:
   host: ""
