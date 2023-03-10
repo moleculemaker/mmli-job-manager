@@ -30,10 +30,10 @@ with open('/etc/config/server.yaml', "r") as conf_file:
     config = yaml.load(conf_file, Loader=yaml.FullLoader)
 
 ## Load secrets from env vars (compatible with Kubernetes Secrets)
-config['db']['host'] = os.environ.get('MARIADB_HOST', '')
-config['db']['user'] = os.environ.get('MARIADB_USER', '')
-config['db']['pass'] = os.environ.get('MARIADB_PASSWORD', '')
-config['db']['database'] = os.environ.get('MARIADB_DATABASE', '')
+config['db']['host'] = os.environ.get('MARIADB_HOST', config['db']['host'])
+config['db']['user'] = os.environ.get('MARIADB_USER', config['db']['user'])
+config['db']['pass'] = os.environ.get('MARIADB_PASSWORD', config['db']['pass'])
+config['db']['database'] = os.environ.get('MARIADB_DATABASE', config['db']['database'])
 
 # Configure logging
 logging.basicConfig(
