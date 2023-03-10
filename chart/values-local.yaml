@@ -1,0 +1,15 @@
+ingress:
+  ingressClassName: nginx
+  hostname: jobmgr.localhost
+
+persistence:
+  storageClassName: hostpath
+
+mariadb:
+  enabled: true
+  auth:
+    existingSecret: ""
+    rootPassword: "mmli"
+    password: "mmli"
+    username: "mmli"
+    database: "mmli"

@@ -1,0 +1,51 @@
+# Defines the deployment of the app running in a pod on any worker node
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jobs-api
+  labels:
+    app: jobs-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jobs-api
+  template:
+    metadata:
+      labels:
+        app: jobs-api
+    spec:
+      serviceAccountName: {{ .Release.Name }}-foreman
+      containers:
+        - name: jobs-api
+          image: {{ .Values.controller.image }}
+          env:
+          - name: MARIADB_HOST
+{{- if .Values.mariadb.hostname }}
+            value: {{ .Value.mariadb.hostname }}
+{{ else }}
+            value: {{ .Release.Name }}-mariadb.{{ .Release.Namespace }}.svc.cluster.local
+{{- end }}
+          - name: MARIADB_USER
+{{- if .Values.mariadb.auth.existingSecret }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.mariadb.auth.existingSecret }}
+                key: mariadb-password
+{{- else }}
+            value: {{ .Values.mariadb.auth.username }}
+{{- end }}
+          - name: MARIADB_PASSWORD
+{{- if .Values.mariadb.auth.existingSecret }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.mariadb.auth.existingSecret }}
+                key: mariadb-password
+{{- else }}
+            value: {{ .Values.mariadb.auth.password }}
+{{- end }}
+          - name: MARIADB_DATABASE
+            value: {{ .Values.mariadb.auth.database }}
+          ports:
+            - containerPort: 8888
+          imagePullPolicy: Always
