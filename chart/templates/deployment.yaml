@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jobs-api
+  name: {{ .Release.Name }}
   labels:
     app: jobs-api
 spec:
@@ -35,6 +35,8 @@ spec:
 {{- else }}
             value: {{ .Values.mariadb.auth.username }}
 {{- end }}
+
+
           - name: MARIADB_PASSWORD
 {{- if .Values.mariadb.auth.existingSecret }}
             valueFrom:

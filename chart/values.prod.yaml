@@ -1,10 +1,20 @@
 ingress:
   hostname: jobmgr.mmli1.ncsa.illinois.edu
+  tls: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    kubernetes.io/tls-acme: "true"
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    
 
 persistence:
   storageClassName: csi-cinder-sc-retain
+  storageSize: "100Gi"
 
 mariadb:
+  global:
+    storageClass: csi-cinder-sc-retain
   enabled: true
   auth:
+    username: mmli
     existingSecret: "job-manager-mariadb"

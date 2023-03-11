@@ -8,6 +8,12 @@ metadata:
   {{ toYaml . | nindent 4 }}
 {{- end }}
 spec:
+{{- if .Values.ingress.tls }}
+  tls:
+  - hosts:
+    - {{ .Values.ingress.hostname }}
+    secretName: {{ .Values.ingress.hostname }}-tls
+{{- end }}
 {{- if .Values.ingress.ingressClassName }}
   ingressClassName: {{ .Values.ingress.ingressClassName }}
 {{- end }}
@@ -17,7 +23,7 @@ spec:
       paths:
       - backend:
           service:
-            name: jobs-api
+            name: {{ .Release.Name }}
             port:
               number: 8888
         path: /
