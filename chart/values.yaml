@@ -1,13 +1,19 @@
 ingress:
-  hostname: jobmgr.mmli1.ncsa.illinois.edu
+  hostname: jobmgr.localhost
 
 controller:
-  image: "moleculemaker/mmli-job-manager:dev"
+  image: moleculemaker/mmli-job-manager:dev
 
 persistence:
-  storageClassName: csi-cinder-sc-retain
+  # Set this to use a particular StorageClass
+  # Unset this to use a clsuter default StorageClass
+  storageClassName: ""
 
 mariadb:
   enabled: true
   auth:
-    existingSecret: "job-manager-mariadb"
+    existingSecret: ""
+    rootPassword: ""
+    password: ""
+    username: ""
+    database: ""

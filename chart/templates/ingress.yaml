@@ -3,6 +3,10 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: jobs-api
+{{- with .Values.ingress.annotations }}
+  annotations:
+  {{ toYaml . | nindent 4 }}
+{{- end }}
 spec:
 {{- if .Values.ingress.ingressClassName }}
   ingressClassName: {{ .Values.ingress.ingressClassName }}

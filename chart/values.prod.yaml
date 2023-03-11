@@ -1,0 +1,10 @@
+ingress:
+  hostname: jobmgr.mmli1.ncsa.illinois.edu
+
+persistence:
+  storageClassName: csi-cinder-sc-retain
+
+mariadb:
+  enabled: true
+  auth:
+    existingSecret: "job-manager-mariadb"
