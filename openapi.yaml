@@ -5,7 +5,7 @@ info:
   version: 1.0.0
 servers:
 - url: https://jobmgr.mmli1.ncsa.illinois.edu/api/v1
-  description: "SPT-3G API server"
+  description: "MMLI JobManager API server"
 tags:
 - name: Jobs
   description: Manage **Cutout Service** jobs
