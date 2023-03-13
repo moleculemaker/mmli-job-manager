@@ -6,6 +6,8 @@ ingress:
 
 mariadb:
   enabled: true
+#  global:
+#    storageClass: hostpath
   auth:
     rootPassword: "mmli"
     password: "mmli"

@@ -26,16 +26,6 @@ spec:
 {{ else }}
             value: {{ .Release.Name }}-mariadb.{{ .Release.Namespace }}.svc.cluster.local
 {{- end }}
-          - name: MARIADB_USER
-{{- if .Values.mariadb.auth.existingSecret }}
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Values.mariadb.auth.existingSecret }}
-                key: mariadb-password
-{{- else }}
-            value: {{ .Values.mariadb.auth.username }}
-{{- end }}
-
 
           - name: MARIADB_PASSWORD
 {{- if .Values.mariadb.auth.existingSecret }}
@@ -48,6 +38,10 @@ spec:
 {{- end }}
           - name: MARIADB_DATABASE
             value: {{ .Values.mariadb.auth.database }}
+
+          - name: MARIADB_USER
+            value: {{ .Values.mariadb.auth.username }}
+
           ports:
             - containerPort: 8888
           imagePullPolicy: Always
