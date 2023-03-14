@@ -2,3 +2,8 @@ apiVersion: v2
 description: "Job manager"
 name: job-manager
 version: 1.0.0
+dependencies:
+- name: mariadb
+  version: ~11.5.3
+  repository: "https://charts.bitnami.com/bitnami"
+  condition: mariadb.enabled

@@ -1,6 +1,8 @@
 .env
 kubeconfig
 .vscode/
+.idea/
+chart/charts/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

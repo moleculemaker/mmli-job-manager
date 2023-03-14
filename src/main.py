@@ -22,6 +22,8 @@ db = DbConnector(
     mysql_database=config['db']['database'],
 )
 
+log.info(f"Now starting API server: mysql://{config['db']['user']}:****@{config['db']['host']}:3306/{config['db']['database']}")
+
 # Load Kubernetes API
 try:
     import kubejob
@@ -505,8 +507,8 @@ if __name__ == "__main__":
                 db.open_db_connection()
                 waiting_for_db = False
                 db.close_db_connection()
-            except:
-                log.error('Unable to connect to database. Waiting to try again...')
+            except Exception as e:
+                log.error(f'Unable to connect to database. Waiting to try again: {str(e)}')
                 time.sleep(5.0)
         ## Create/update database tables
         db.update_db_tables()
