@@ -1,0 +1,15 @@
+ingress:
+  ingressClassName: nginx
+
+#persistence:
+#  storageClassName: hostpath
+
+mariadb:
+  enabled: true
+#  global:
+#    storageClass: hostpath
+  auth:
+    rootPassword: "mmli"
+    password: "mmli"
+    username: "mmli"
+    database: "mmli"

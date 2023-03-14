@@ -1,0 +1,218 @@
+openapi: 3.0.1
+info:
+  title: SPT-3G API
+  description: 'SPT-3G API provides a RESTful interface to access SPT-3G data. ([Return to docs.](..))'
+  version: 1.0.0
+servers:
+- url: https://jobmgr.mmli1.ncsa.illinois.edu/api/v1
+  description: "MMLI JobManager API server"
+tags:
+- name: Jobs
+  description: Manage **Cutout Service** jobs
+paths:
+  /uws/job/{id}:
+    get:
+      security:
+      - bearerAuth: []
+      tags:
+      - Jobs
+      summary: Fetch info for job by ID
+      description: >
+        Fetch info for job by ID `id`
+      operationId: getJobById
+      parameters:
+      - name: id
+        in: path
+        description: Job ID
+        required: true
+        schema:
+          type: string
+        example: 25f4d3bacae04a59aee7847af82c5012
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobInfo'
+      # externalDocs:
+      #   description: Learn more about job operations provided by this API.
+      #   url: http://spt3g.ncsa.illinois.edu/docs/
+    delete:
+      security:
+      - bearerAuth: []
+      tags:
+      - Jobs
+      summary: Delete a job and all associated files
+      operationId: delete
+      parameters:
+      - name: id
+        in: path
+        description: ID of job to be deleted
+        schema:
+          type: string
+        example: 25f4d3bacae04a59aee7847af82c5012
+        required: true
+      responses:
+        200:
+          description: Job successfully deleted
+  /uws/job:
+    get:
+      security:
+      - bearerAuth: []
+      tags:
+      - Jobs
+      summary: Fetch list of basic info for all jobs
+      operationId: list
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobList'
+    put:
+      security:
+      - bearerAuth: []
+      tags:
+      - Jobs
+      summary: Submit a new cutout job request
+      operationId: cutout
+      requestBody:
+        description: Cutout job specification
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+              - positions
+              - date_start
+              - date_end
+              type: object
+              properties:
+                positions:
+                  type: string
+                  description: CSV-formatted table of positions, specified in each row by RA/DEC coordinates.
+                  example: |
+                    RA,DEC,XSIZE,YSIZE
+                    29.562,-63.902,9.0,9.0
+                    29.604,-53.900,8.0,3.0
+                    30.572,-61.897,7.0,7.0
+                xsize:
+                  type: number
+                  description: Size in arcminutes of the cutout x-axis. Default 10.0.
+                  format: float
+                  example: 1.1
+                  default: 10.0
+                ysize:
+                  type: number
+                  description: Size in arcminutes of the cutout y-axis. Default 10.0.
+                  format: float
+                  example: 1.1
+                  default: 10.0
+                date_start:
+                  type: string
+                  description: Start date for time range in which data was acquired
+                  example: '2021-06-13'
+                date_end:
+                  type: string
+                  description: End date for time range in which data was acquired
+                  example: '2021-07-04'
+                email:
+                  type: boolean
+                  description: Trigger email notification when job completes
+                  example: true
+                  default: false
+                bands:
+                  type: array
+                  description: Frequency bands to include
+                  example:
+                  - '90GHz'
+                  - '150GHz'
+                  - '220GHz'
+                  default:
+                  - '150GHz'
+                filetypes:
+                  type: array
+                  description: Types of files to include
+                  example:
+                  - 'passthrough'
+                  - 'filtered'
+                  default:
+                  - 'passthrough'
+                yearly:
+                  type: array
+                  description: The yearly tag or tags to use
+                  example:
+                    - 'yearly_winter_2020'
+                    - 'yearly_rawmap_v1_2019_2020'
+                    - 'cleanbeammap_v1_2019_2020'
+                get_lightcurve:
+                  type: boolean
+                  description: Extract light curve at pixel position for each object
+                  example: false
+                  default: false
+                get_uniform_coverage:
+                  type: boolean
+                  description: Get only objects within the uniform coverage
+                  example: false
+                  default: false
+                nofits:
+                  type: boolean
+                  description: Do not create fits files for stamps
+                  example: false
+                  default: false
+
+      responses:
+        200:
+          description: Job successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobInfo'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    JobList:
+      type: array
+      description: Array of jobs and basic information
+      items:
+        $ref: '#/components/schemas/JobInfo'
+    JobInfo:
+      type: object
+      description: Complete information about a specific job
+      properties:
+        type:
+          type: string
+          description: Type of job
+          example: "cutout"
+        run_id:
+          type: string
+          description: Label associated with job. Not in general unique.
+          example: my-astro-cutouts
+        job_id:
+          type: string
+          description: Universally unique identifier of job
+          example: "f29a011f42dd4d80bb66da110711c66f"
+        phase:
+          type: string
+          description: State of submitted job
+          example: "completed"
+        time_start:
+          type: string
+          description: Date and time job was started
+          example: "2020-09-22 18:27:27"
+        time_complete:
+          type: string
+          description: Date and time job was completed
+          example: "2020-09-22 18:30:12"
+        cutout_files:
+          type: array
+          description: List of generated cutout files
+          items:
+            type: string
+            example: "spt3gJ000048.0+001800.0/spt3gJ000048.0+001800.0_150GHz_yearly_winter_2020.fits"

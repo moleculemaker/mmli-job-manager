@@ -8,5 +8,7 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 1Gi
-  storageClassName: csi-cinder-sc-retain
+      storage: {{ .Values.persistence.storageSize }}
+{{- if .Values.persistence.storageClassName }}
+  storageClassName: {{ .Values.persistence.storageClassName }}
+{{- end }}
