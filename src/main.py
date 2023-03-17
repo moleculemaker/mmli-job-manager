@@ -641,9 +641,12 @@ class CLEANStatusJobHandler(BaseHandler):
                     # update_job_status(user_id=self._token_decoded["user_id"])
                     # job_list = db.select_job_records(user_id=self._token_decoded["user_id"], phase=phase)
                     job_list = db.select_job_records(user_id='DummyID', phase=phase, fields=fields)
+                    responseList = []
                     for job in job_list:
                         job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
-                    self.send_response(job_list, indent=2)
+                        responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': job['time_created']}
+                        responseList.append(responseObject)
+                    self.send_response(responseList, indent=2)
                     self.finish()
                     return
                 except Exception as e:
@@ -679,7 +682,8 @@ class CLEANStatusJobHandler(BaseHandler):
             if property and property in valid_properties.keys():
                 job = job[valid_properties[property]]
             job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
-            self.send_response(job, indent=2)
+            responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': job['time_created']}
+            self.send_response(responseObject, indent=2)
             self.finish()
             return
         except Exception as e:
@@ -737,12 +741,52 @@ class CLEANResultJobHandler(BaseHandler):
                 job = job[valid_properties[property]]
             job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
             output_dir = '/app/results/inputs/'
-            temp_job_id = '5963f317f06c43c68f12bc001c24fa55_maxsep.csv'
+            fileName = job['job_id'] + '_maxsep.csv'
+            responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': job['time_created']}
             input_str = ''
-            with open(output_dir + temp_job_id, 'r') as f:
+            with open(output_dir + fileName, 'r') as f:
                 input_str = f.read().strip()
-            job['results'] = input_str
-            self.send_response(job, indent=2)
+            
+            lines = input_str.split('\n')
+            # create a list to store the results
+            results = []
+
+            # process each line
+            for line in lines:
+                # split the line into the sequence header and the EC numbers/scores
+                seq_header, ec_scores_str = line.split(',', 1)
+                
+                # create a dictionary to store the sequence header and the EC numbers/scores
+                result = {
+                    "sequence": seq_header,
+                    "result": []
+                }
+                
+                # split the EC numbers/scores string into individual EC number/score pairs
+                ec_scores_pairs = ec_scores_str.split(',')
+                
+                # process each EC number/score pair
+                for ec_score_pair in ec_scores_pairs:
+                    # split the EC number/score pair into the EC number and the score
+                    ec_number, score = ec_score_pair.split('/')
+                    
+                    # create a dictionary to store the EC number and the score
+                    ec_score_dict = {
+                        "ecNumber": ec_number,
+                        "score": score
+                    }
+                    
+                    # add the EC number/score dictionary to the result list
+                    result["result"].append(ec_score_dict)
+                
+                # add the result dictionary to the results list
+                results.append(result)
+
+            # convert the results list to JSON and print it
+            # json_str = json.dumps(results, indent=4)
+
+            responseObject['results'] = results
+            self.send_response(responseObject, indent=2)
             self.finish()
             return
         except Exception as e:
