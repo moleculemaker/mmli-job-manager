@@ -51,7 +51,7 @@ uws:
         memory: "12Gi"
   ## Server working directory to store generated job data
   workingVolume:
-    claimName: "mmli-clean-job-data"
+    claimName: "mmli-clean-job-weights"
     mountPath: "/uws"
     subPath: "uws"
   ## Central data volumes to be mounted in job containers
