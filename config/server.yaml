@@ -51,23 +51,23 @@ uws:
         memory: "12Gi"
   ## Server working directory to store generated job data
   workingVolume:
-    claimName: "job-manager-pvc"
+    claimName: "mmli-clean-job-data"
     mountPath: "/uws"
     subPath: "uws"
   ## Central data volumes to be mounted in job containers
   volumes:
-    - name: 'job-output'
+    - name: 'mmli-clean-job-weights'
       mountPath: '/app/data/inputs'
       subPath: 'input'
-      claimName: 'job-manager-pvc'
+      claimName: 'mmli-clean-job-weights'
     - name: 'job-output'
       mountPath: '/app/results/inputs'
       subPath: 'output'
-      claimName: 'job-manager-pvc'
+      claimName: 'mmli-clean-job-weights'
     - name: 'job-output'
       mountPath: '/root/.cache/torch/hub/checkpoints'
       subPath: 'weights'
-      claimName: 'job-manager-pvc'
+      claimName: 'mmli-clean-job-weights'
   # - name: data
   #   claimName: mmli-data-pvc
   #   mountPath: "/data/mmli"
