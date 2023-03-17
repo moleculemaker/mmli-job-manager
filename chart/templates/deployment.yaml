@@ -23,7 +23,7 @@ spec:
         # Volume to host job data
         - name: "job-output"
           persistentVolumeClaim:
-            claimName: "job-manager-pvc" 
+            claimName: "mmli-clean-job-weights" 
       containers:
         - name: jobs-api
           volumeMounts:
