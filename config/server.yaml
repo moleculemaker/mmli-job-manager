@@ -23,8 +23,8 @@ uws:
       tag: ""
       pullPolicy: "Always"
     image:
-      repository: "ubuntu"
-      tag: "22.04"
+      repository: "moleculemaker/clean-image-amd64"
+      tag: "latest"
       pullPolicy: "IfNotPresent"
       ## Image pull secrets if necessary
       # pullSecrets:
@@ -39,23 +39,35 @@ uws:
     ##          the server UID is 1000, then files created by the job will not in general
     ##          allow the server to delete them when cleaning up deleted jobs.
     securityContext:
-      runAsUser: 1000
-      runAsGroup: 1000
+      runAsUser: 0
+      runAsGroup: 0
       # fsGroup: 202
     resources:
       limits:
         cpu: "1"
-        memory: "1Gi"
+        memory: "16Gi"
       requests:
         cpu: "0.5"
-        memory: "100Mi"
+        memory: "12Gi"
   ## Server working directory to store generated job data
   workingVolume:
-    claimName: "uws-working-volume"
+    claimName: "mmli-clean-job-weights"
     mountPath: "/uws"
     subPath: "uws"
   ## Central data volumes to be mounted in job containers
-  volumes: []
+  volumes:
+    - name: 'job-output'
+      mountPath: '/app/data/inputs'
+      subPath: 'input'
+      claimName: 'mmli-clean-job-weights'
+    - name: 'job-output'
+      mountPath: '/app/results/inputs'
+      subPath: 'output'
+      claimName: 'mmli-clean-job-weights'
+    - name: 'job-output'
+      mountPath: '/root/.cache/torch/hub/checkpoints'
+      subPath: 'weights'
+      claimName: 'mmli-clean-job-weights'
   # - name: data
   #   claimName: mmli-data-pvc
   #   mountPath: "/data/mmli"

@@ -1,8 +1,23 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: job-manager-pv
+spec:
+  {{- if .Values.persistence.storageClassName }}
+  storageClassName: {{ .Values.persistence.storageClassName }}
+  {{- end }}
+  capacity:
+    storage: {{ .Values.persistence.storageSize }}
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: /Users/yashdeepthorat/NCSA/mmli-job-manager/data
+  persistentVolumeReclaimPolicy: Recycle
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: uws-working-volume
+  name: job-manager-pvc
 spec:
   accessModes:
     - ReadWriteMany
@@ -12,3 +27,4 @@ spec:
 {{- if .Values.persistence.storageClassName }}
   storageClassName: {{ .Values.persistence.storageClassName }}
 {{- end }}
+  volumeName: job-manager-pv
