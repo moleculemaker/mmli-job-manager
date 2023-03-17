@@ -689,7 +689,66 @@ class CLEANStatusJobHandler(BaseHandler):
             
 
 
-# class CLEANResultJobHandler(BaseHandler):
+class CLEANResultJobHandler(BaseHandler):
+     def post(self):
+        job_id = self.getarg('jobId', default='')
+
+        # See https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#resourceuri
+        ## The valid properties are the keys of the returned job data structure
+        valid_properties = {
+            'phase': 'phase',
+            'user_id': 'results',
+            'command': 'command',
+            'run_id': 'run_id',
+            'email': 'email',
+            'type': 'type',
+            'job_info': 'job_info',
+        }
+        fields = ['job_id', 'phase', 'time_created']
+        response = {}
+        # If no job_id is included in the request URL, return a list of jobs. See:
+        # UWS Schema: https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#UWSSchema
+        if not job_id:
+            self.send_response('Empty job ID.', http_status_code=global_vars.HTTP_BAD_REQUEST, indent=2)
+            self.finish()
+            return
+        # If a job_id is provided but it is invalid, then the request is malformed:
+        if not valid_job_id(job_id):
+            self.send_response('Invalid job ID.', http_status_code=global_vars.HTTP_BAD_REQUEST, indent=2)
+            self.finish()
+            return
+        # If a property is provided but it is invalid, then the request is malformed:
+        elif isinstance(property, str) and property not in valid_properties:
+            self.send_response(f'Invalid job property requested. Supported properties are {", ".join([key for key in valid_properties.keys()])}', http_status_code=global_vars.HTTP_BAD_REQUEST, indent=2)
+            self.finish()
+            return
+        try:
+            ## Query the specified job by ID
+            # update_job_status(job_id=job_id)
+            job_list = db.select_job_records(job_id=job_id, fields=fields)
+            try:
+                job = job_list[0]
+            except:
+                job = {}
+            ## TODO: Implement the specific property return if requested
+            ## If a specific job property was requested using an API endpoint
+            ## of the form `/job/[job_id]/[property]]`, return that property only.
+            if property and property in valid_properties.keys():
+                job = job[valid_properties[property]]
+            job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
+            output_dir = '/app/results/inputs/'
+            temp_job_id = '5963f317f06c43c68f12bc001c24fa55_maxsep.csv'
+            input_str = ''
+            with open(output_dir + temp_job_id, 'r') as f:
+                input_str = f.read().strip()
+            job['results'] = input_str
+            self.send_response(job, indent=2)
+            self.finish()
+            return
+        except Exception as e:
+            self.send_response(f'''Error querying job records: {e}''', http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+            self.finish()
+            return    
 
 
 def make_app(app_base_path='/', api_base_path='api', debug=False):
@@ -716,7 +775,8 @@ def make_app(app_base_path='/', api_base_path='api', debug=False):
             (r"{}/{}/uws/report/start/(.*)".format(app_base_path, api_base_path), JobReportStartHandler),
             (r"{}/{}/uws/report/end/(.*)".format(app_base_path, api_base_path), JobReportCompleteHandler),
             (r"{}/{}/job/submit".format(app_base_path, api_base_path), CLEANSubmitJobHandler),
-            (r"{}/{}/job/status".format(app_base_path, api_base_path), CLEANStatusJobHandler)
+            (r"{}/{}/job/status".format(app_base_path, api_base_path), CLEANStatusJobHandler),
+            (r"{}/{}/job/result".format(app_base_path, api_base_path), CLEANResultJobHandler)
         ],
         **settings
     )
