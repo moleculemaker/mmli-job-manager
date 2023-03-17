@@ -1,12 +1,12 @@
 server:
-  protocol: "http"
+  protocol: "https"
   port: 8888
   debug: true
   ## API basepath. Must match an ingress in the ingress.basepaths list.
   apiBasePath: "api/v1"
   basePath: ""
   ## API hostname. Must match the ingress.hostname value.
-  hostName: "localhost"
+  hostName: "jobmgr.mmli1.ncsa.illinois.edu"
   logLevel: "DEBUG"
   kubeconfig: "/opt/kubeconfig"
   namespace: "job-manager"
@@ -17,10 +17,10 @@ db:
   database: ""
 uws:
   job:
-    monitorEnabled: false
+    monitorEnabled: true
     imageJobMonitor:
-      repository: ""
-      tag: ""
+      repository: "moleculemaker/mmli-job-manager"
+      tag: "latest"
       pullPolicy: "Always"
     image:
       repository: "moleculemaker/clean-image-amd64"
