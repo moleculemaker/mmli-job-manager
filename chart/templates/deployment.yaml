@@ -16,8 +16,20 @@ spec:
         app: jobs-api
     spec:
       serviceAccountName: {{ .Release.Name }}-foreman
+      volumes:
+        # - name: server-config
+        #   configMap:
+        #     name: {{ .Release.Name }}-config
+        # Volume to host job data
+        - name: "job-output"
+          persistentVolumeClaim:
+            claimName: "job-manager-pvc" 
       containers:
         - name: jobs-api
+          volumeMounts:
+          - name: "job-output"
+            mountPath: "/app/results/inputs"
+            subPath: "output"
           image: {{ .Values.controller.image }}
           env:
           - name: MARIADB_HOST

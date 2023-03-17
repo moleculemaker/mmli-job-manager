@@ -9,8 +9,8 @@ controller:
 persistence:
   # Set this to use a particular StorageClass
   # Unset this to use a clsuter default StorageClass
-  storageClassName: ""
-  storageSize: "1Gi"
+  storageClassName: "job-manager-storage-class"
+  storageSize: "10Gi"
 
 # https://artifacthub.io/packages/helm/bitnami/mariadb?modal=values
 mariadb:

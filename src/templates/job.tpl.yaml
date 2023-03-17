@@ -18,12 +18,12 @@ spec:
         ownerId: "{{ ownerId }}"
     spec:
       restartPolicy: Never
-      {%- if securityContext %}
-      securityContext:
-        runAsUser: {{ securityContext['runAsUser'] }}
-        runAsGroup: {{ securityContext['runAsGroup'] }}
-        # fsGroup: {{ securityContext['fsGroup'] }}
-      {%- endif %}
+      # {%- if securityContext %}
+      # securityContext:
+      #   runAsUser: {{ securityContext['runAsUser'] }}
+      #   runAsGroup: {{ securityContext['runAsGroup'] }}
+      #   # fsGroup: {{ securityContext['fsGroup'] }}
+      # {%- endif %}
       volumes:
         # - name: server-config
         #   configMap:
@@ -31,25 +31,13 @@ spec:
         # Volume to host job data
         - name: "job-output"
           persistentVolumeClaim:
-            claimName: "{{ workingVolume.claimName }}"
-        {%- for volume in volumes %}
-        - name: {{ volume.name }}
-        {%- if volume.claimName %}
-          persistentVolumeClaim:
-            claimName: {{ volume.claimName }}
-        {%- elif volume.configMapName %}
-          configMap:
-            name: {{ volume.configMapName }}
-        {%- else %}
-          emptyDir: {}
-        {%- endif %}
-      {%- endfor %}
+            claimName: "{{ workingVolume.claimName }}" 
       initContainers:
       - name: init
         image: ubuntu:22.04
         imagePullPolicy: IfNotPresent
-        securityContext:
-          runAsUser: 0
+        # securityContext:
+        #   runAsUser: 0
         volumeMounts:
         - name: "job-output"
           mountPath: "/uws"
@@ -62,19 +50,19 @@ spec:
         - -c
         # - sleep 1000d
         - >
-          mkdir -p "${JOB_OUTPUT_DIR}" &&
-          chown {{ securityContext['runAsUser'] }}:{{ securityContext['runAsGroup'] }} "${JOB_OUTPUT_DIR}"
+          mkdir -p "${JOB_OUTPUT_DIR}"
+        #   chown {{ securityContext['runAsUser'] }}:{{ securityContext['runAsGroup'] }} "${JOB_OUTPUT_DIR}"
       containers:
       - name: job
         image: {{ image.repository }}:{{ image.tag }}
         imagePullPolicy: {{ image.pull_policy }}
-        resources:
-          limits:
-            cpu: "{{ resources.limits.cpu }}"
-            memory: "{{ resources.limits.memory }}"
-          requests:
-            cpu: "{{ resources.requests.cpu }}"
-            memory: "{{ resources.requests.memory }}"
+        # resources:
+        #   limits:
+        #     cpu: "{{ resources.limits.cpu }}"
+        #     memory: "{{ resources.limits.memory }}"
+        #   requests:
+        #     cpu: "{{ resources.requests.cpu }}"
+        #     memory: "{{ resources.requests.memory }}"
         command:
         - 'bash'
         - '-c'

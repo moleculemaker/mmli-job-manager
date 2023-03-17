@@ -22,6 +22,11 @@ db = DbConnector(
     mysql_database=config['db']['database'],
 )
 
+APPCONFIG = {
+    # 'auth_token': os.environ['SPT_API_TOKEN'],
+    'baseUrl': 'https://mmli.clean.com',
+}
+
 log.info(f"Now starting API server: mysql://{config['db']['user']}:****@{config['db']['host']}:3306/{config['db']['database']}")
 
 # Load Kubernetes API
@@ -469,6 +474,326 @@ class ResultFileHandler(BaseHandler):
             self.finish()
             return
 
+class CLEANSubmitJobHandler(BaseHandler):
+    def post(self):
+        try:
+            data = json.loads(self.request.body)
+            job_config = ""
+            for record in data['input_fasta']:
+                job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
+            # echo = "Hello World!"
+
+            ## Command that the job container will execute. The `$JOB_OUTPUT_DIR` environment variable is
+            ## populated at run time after a job ID and output directory have been provisioned.
+            command = f'''cat /tmp/input.fasta'''
+            # log.debug(f"Job command: {command}")
+
+            ## Options:
+
+            ## environment is a list of environment variable names and values like [{'name': 'env1', 'value': 'val1'}]
+            environment = self.getarg('environment', default=[]) # optional
+
+            ## Number of parallel job containers to run. The containers will execute identical code. Coordination is the
+            ## responsibility of the job owner.
+            ## replicas = self.getarg('replicas', default=1) # optional
+            replicas = 1
+
+            ## Valid run_id value follows the Kubernetes label value constraints:
+            ##   - must be 63 characters or less (cannot be empty),
+            ##   - must begin and end with an alphanumeric character ([a-z0-9A-Z]),
+            ##   - could contain dashes (-), underscores (_), dots (.), and alphanumerics between.
+            ## See also:
+            ##   - https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#runId
+            ##   - https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+            run_id = self.getarg('run_id', default='') # optional
+            if run_id and (not isinstance(run_id, str) or run_id != re.sub(r'[^-._a-zA-Z0-9]', "", run_id) or not re.match(r'[a-zA-Z0-9]', run_id)):
+                self.send_response('Invalid run_id. Must be 63 characters or less and begin with alphanumeric character and contain only dashes (-), underscores (_), dots (.), and alphanumerics between.', http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
+                self.finish()
+                return
+            ## Obtain user ID from auth token
+            # user_id = self._token_decoded["user_id"]
+            user_id = 'DummyID'
+        except Exception as e:
+            self.send_response(
+                str(e), http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+            self.finish()
+            return
+
+        response = kubejob.create_job(
+            command=command,
+            run_id=run_id,
+            owner_id=user_id,
+            replicas=replicas,
+            environment=environment,
+            job_config=job_config,
+        )
+        log.debug(response)
+        if response['status'] != global_vars.STATUS_OK:
+            self.send_response(response['message'], http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+            self.finish()
+            return
+        try:
+            timeout = 30
+            while timeout > 0:
+                results = kubejob.list_jobs(
+                    job_id=response['job_id'],
+                )
+                if results['jobs']:
+                    job = construct_job_object(results['jobs'][0])
+                    try:
+                        user_agent = self.request.headers["User-Agent"]
+                    except:
+                        user_agent = ''
+                    queue_position = 0
+                    try:
+                        ## TODO: Replace with specialized query that uses the SQL count() command
+                        job_list = []
+                        for phase in ['pending', 'queued', 'executing']:
+                            job_list.extend(db.select_job_records(phase=phase, fields=['id']))
+                        log.debug(job_list)
+                        queue_position = len(job_list)
+                    except Exception as e:
+                        log.error(f'''Error querying job queue position: {e}''')
+                    try:
+                        command = job['parameters']['command']
+                        if isinstance(command, list):
+                            command = ' '.join(command)
+                        ## TODO: Replace the JSON dump of the full job info with proper table records.
+                        job_info = {
+                            'job_id': job['jobId'],
+                            'run_id': job['runId'],
+                            'user_id': job['ownerId'],
+                            'command': command,
+                            'type': 'cutout',
+                            'phase': job['phase'],
+                            'time_created': job['creationTime'] or 0,
+                            'time_start': job['startTime'] or 0,
+                            'time_end': job['endTime'] or 0,
+                            'user_agent': user_agent,
+                            'email': 'dummy@example.com',
+                            'job_info': json.dumps(job, default = self.json_converter),
+                            'queue_position': queue_position,
+                            }
+                        db.insert_job_record(job_info)
+                        ##
+                        ## TODO: This is a hack for testing locally, because the monitor sidecar container
+                        ##       would be calling back to the API server with a job start and end report.
+                        ##
+                        if not config['uws']['job']['monitorEnabled']:
+                            log.debug(f'''Updating started job "{job_info['job_id']}"...''')
+                            db.update_job(
+                                job_id=job_info['job_id'],
+                                phase='executing',
+                                start_time=datetime.utcnow(),
+                            )
+                    except Exception as e:
+                        err_msg = f'''Error recording job in database: {e}'''
+                        log.error(err_msg)
+                        self.send_response(err_msg, http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+                        self.finish()
+                        return
+                    responseBody = {
+                        'jobId': job['jobId'],
+                        'url' : APPCONFIG['baseUrl'] + '/jobId/' + job['jobId'],
+                        'status' : '1',
+                        'created_at': job['creationTime'] or 0
+                    }
+                    self.send_response(responseBody, indent=2)
+                    self.finish()
+                    return
+                else:
+                    timeout -= 1
+                    time.sleep(0.300)
+            self.send_response("Job creation timed out.", http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+            self.finish()
+            return
+        except Exception as e:
+            self.send_response(str(e), http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+            self.finish()
+            return
+        
+
+class CLEANStatusJobHandler(BaseHandler):
+    def post(self):
+        job_id = self.getarg('jobId', default='')
+
+        # See https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#resourceuri
+        ## The valid properties are the keys of the returned job data structure
+        valid_properties = {
+            'phase': 'phase',
+            'user_id': 'results',
+            'command': 'command',
+            'run_id': 'run_id',
+            'email': 'email',
+            'type': 'type',
+            'job_info': 'job_info',
+        }
+        fields = ['job_id', 'phase', 'time_created']
+        response = {}
+        # If no job_id is included in the request URL, return a list of jobs. See:
+        # UWS Schema: https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#UWSSchema
+        if not job_id:
+            phase = self.getarg('phase', default='') # optional
+            if not phase or phase in global_vars.VALID_JOB_STATUSES:
+                # results = kubejob.list_jobs()
+                try:
+                    ## Query for all jobs belonging to the authenticated user
+                    # update_job_status(user_id=self._token_decoded["user_id"])
+                    # job_list = db.select_job_records(user_id=self._token_decoded["user_id"], phase=phase)
+                    job_list = db.select_job_records(user_id='DummyID', phase=phase, fields=fields)
+                    responseList = []
+                    for job in job_list:
+                        job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
+                        responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': job['time_created']}
+                        responseList.append(responseObject)
+                    self.send_response(responseList, indent=2)
+                    self.finish()
+                    return
+                except Exception as e:
+                    self.send_response(f'''Error querying job records: {e}''', http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+                    self.finish()
+                    return
+            else:
+                response = 'Valid job categories are: {}'.format(global_vars.VALID_JOB_STATUSES)
+                self.send_response(response, http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
+                self.finish()
+                return
+        # If a job_id is provided but it is invalid, then the request is malformed:
+        if not valid_job_id(job_id):
+            self.send_response('Invalid job ID.', http_status_code=global_vars.HTTP_BAD_REQUEST, indent=2)
+            self.finish()
+            return
+        # If a property is provided but it is invalid, then the request is malformed:
+        elif isinstance(property, str) and property not in valid_properties:
+            self.send_response(f'Invalid job property requested. Supported properties are {", ".join([key for key in valid_properties.keys()])}', http_status_code=global_vars.HTTP_BAD_REQUEST, indent=2)
+            self.finish()
+            return
+        try:
+            ## Query the specified job by ID
+            # update_job_status(job_id=job_id)
+            job_list = db.select_job_records(job_id=job_id, fields=fields)
+            try:
+                job = job_list[0]
+            except:
+                job = {}
+            ## TODO: Implement the specific property return if requested
+            ## If a specific job property was requested using an API endpoint
+            ## of the form `/job/[job_id]/[property]]`, return that property only.
+            if property and property in valid_properties.keys():
+                job = job[valid_properties[property]]
+            job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
+            responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': job['time_created']}
+            self.send_response(responseObject, indent=2)
+            self.finish()
+            return
+        except Exception as e:
+            self.send_response(f'''Error querying job records: {e}''', http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+            self.finish()
+            return    
+            
+
+
+class CLEANResultJobHandler(BaseHandler):
+     def post(self):
+        job_id = self.getarg('jobId', default='')
+
+        # See https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#resourceuri
+        ## The valid properties are the keys of the returned job data structure
+        valid_properties = {
+            'phase': 'phase',
+            'user_id': 'results',
+            'command': 'command',
+            'run_id': 'run_id',
+            'email': 'email',
+            'type': 'type',
+            'job_info': 'job_info',
+        }
+        fields = ['job_id', 'phase', 'time_created']
+        response = {}
+        # If no job_id is included in the request URL, return a list of jobs. See:
+        # UWS Schema: https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#UWSSchema
+        if not job_id:
+            self.send_response('Empty job ID.', http_status_code=global_vars.HTTP_BAD_REQUEST, indent=2)
+            self.finish()
+            return
+        # If a job_id is provided but it is invalid, then the request is malformed:
+        if not valid_job_id(job_id):
+            self.send_response('Invalid job ID.', http_status_code=global_vars.HTTP_BAD_REQUEST, indent=2)
+            self.finish()
+            return
+        # If a property is provided but it is invalid, then the request is malformed:
+        elif isinstance(property, str) and property not in valid_properties:
+            self.send_response(f'Invalid job property requested. Supported properties are {", ".join([key for key in valid_properties.keys()])}', http_status_code=global_vars.HTTP_BAD_REQUEST, indent=2)
+            self.finish()
+            return
+        try:
+            ## Query the specified job by ID
+            # update_job_status(job_id=job_id)
+            job_list = db.select_job_records(job_id=job_id, fields=fields)
+            try:
+                job = job_list[0]
+            except:
+                job = {}
+            ## TODO: Implement the specific property return if requested
+            ## If a specific job property was requested using an API endpoint
+            ## of the form `/job/[job_id]/[property]]`, return that property only.
+            if property and property in valid_properties.keys():
+                job = job[valid_properties[property]]
+            job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
+            output_dir = '/app/results/inputs/'
+            fileName = job['job_id'] + '_maxsep.csv'
+            responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': job['time_created']}
+            input_str = ''
+            with open(output_dir + fileName, 'r') as f:
+                input_str = f.read().strip()
+            
+            lines = input_str.split('\n')
+            # create a list to store the results
+            results = []
+
+            # process each line
+            for line in lines:
+                # split the line into the sequence header and the EC numbers/scores
+                seq_header, ec_scores_str = line.split(',', 1)
+                
+                # create a dictionary to store the sequence header and the EC numbers/scores
+                result = {
+                    "sequence": seq_header,
+                    "result": []
+                }
+                
+                # split the EC numbers/scores string into individual EC number/score pairs
+                ec_scores_pairs = ec_scores_str.split(',')
+                
+                # process each EC number/score pair
+                for ec_score_pair in ec_scores_pairs:
+                    # split the EC number/score pair into the EC number and the score
+                    ec_number, score = ec_score_pair.split('/')
+                    
+                    # create a dictionary to store the EC number and the score
+                    ec_score_dict = {
+                        "ecNumber": ec_number,
+                        "score": score
+                    }
+                    
+                    # add the EC number/score dictionary to the result list
+                    result["result"].append(ec_score_dict)
+                
+                # add the result dictionary to the results list
+                results.append(result)
+
+            # convert the results list to JSON and print it
+            # json_str = json.dumps(results, indent=4)
+
+            responseObject['results'] = results
+            self.send_response(responseObject, indent=2)
+            self.finish()
+            return
+        except Exception as e:
+            self.send_response(f'''Error querying job records: {e}''', http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+            self.finish()
+            return    
+
 
 def make_app(app_base_path='/', api_base_path='api', debug=False):
     ## Configure app base path
@@ -493,6 +818,9 @@ def make_app(app_base_path='/', api_base_path='api', debug=False):
             (r"{}/{}/uws/job".format(app_base_path, api_base_path), JobHandler),
             (r"{}/{}/uws/report/start/(.*)".format(app_base_path, api_base_path), JobReportStartHandler),
             (r"{}/{}/uws/report/end/(.*)".format(app_base_path, api_base_path), JobReportCompleteHandler),
+            (r"{}/{}/job/submit".format(app_base_path, api_base_path), CLEANSubmitJobHandler),
+            (r"{}/{}/job/status".format(app_base_path, api_base_path), CLEANStatusJobHandler),
+            (r"{}/{}/job/result".format(app_base_path, api_base_path), CLEANResultJobHandler)
         ],
         **settings
     )

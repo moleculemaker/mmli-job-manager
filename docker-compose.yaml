@@ -39,3 +39,4 @@ services:
       - ./kubeconfig:/opt/kubeconfig:ro
       - ./src:/home/worker/src:ro
       - ./test:/home/worker/test:ro
+      - ./data/output:/app/results/inputs:ro

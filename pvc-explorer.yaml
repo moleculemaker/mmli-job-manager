@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pvc-explorer
+  namespace: job-manager
+spec:
+  containers:
+  - image: ubuntu:20.04
+    imagePullPolicy: IfNotPresent
+    name: pvc-explorer
+    stdin: true
+    tty: true
+    volumeMounts:
+    - mountPath: /app/data/weights
+      name: inputs
+    workingDir: /app/data
+  restartPolicy: Always
+  volumes:
+  - name: inputs
+    persistentVolumeClaim:
+      claimName: job-manager-pvc

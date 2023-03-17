@@ -8,6 +8,8 @@ import yaml
 import json
 from jinja2 import Template
 import uuid
+import base64
+
 
 ## Load Kubernetes cluster config. Unhandled exception if not in Kubernetes environment.
 try:
@@ -161,7 +163,7 @@ def delete_job(job_id: str) -> None:
     #     raise
 
 
-def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None, job_config={}):
+def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None, job_config=""):
     response = {
         'job_id': None,
         'message': None,
@@ -212,6 +214,10 @@ def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None
         with open(os.path.join(os.path.dirname(__file__), 'templates', templateFile)) as f:
             templateText = f.read()
         template = Template(templateText)
+
+        encoded_data = base64.b64encode(job_config.encode('utf-8')).decode('utf-8')
+        mount_path = '/app/data/inputs'
+
         job_body = yaml.safe_load(template.render(
             name=job_name,
             runId=run_id,
@@ -234,7 +240,9 @@ def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None
                 'tag': config['uws']['job']['imageJobMonitor']['tag'],
                 'pull_policy': config['uws']['job']['imageJobMonitor']['pullPolicy'],
             },
-            command=command,
+            command=f'''echo {encoded_data} | base64 -d > {mount_path}/{job_id}.fasta && python CLEAN_infer_fasta.py --fasta_data {job_id}''',
+            # command=f'''mkdir {mount_path}/{job_id}/''',
+
             environment=environment,
             uws_root_dir=config['uws']['workingVolume']['mountPath'],
             job_output_dir=job_output_dir,
