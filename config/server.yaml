@@ -56,7 +56,7 @@ uws:
     subPath: "uws"
   ## Central data volumes to be mounted in job containers
   volumes:
-    - name: 'mmli-clean-job-weights'
+    - name: 'job-output'
       mountPath: '/app/data/inputs'
       subPath: 'input'
       claimName: 'mmli-clean-job-weights'
