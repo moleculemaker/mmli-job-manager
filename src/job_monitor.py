@@ -7,7 +7,7 @@ import shutil
 
 
 def report_job_ended(url='', job_id='', token='', phase='completed', numAttempts=5):
-    assert job_id and token and url
+    assert job_id and url
     ## Make several attempts to call the API, tolerating timeouts and other errors
     attemptIdx = 0
     while attemptIdx < numAttempts:
@@ -32,10 +32,10 @@ def report_job_ended(url='', job_id='', token='', phase='completed', numAttempts
 
 def main(args):
     job_id = args.job
-    token = args.token
+    token = 'dummy'
     url = args.url
     files_dir = args.dir
-    assert job_id and token and url
+    assert job_id and url
     
     ## If prestop lifecycle hook was triggered by Kubernetes, report failed job.
     if args.prestop:
@@ -43,7 +43,7 @@ def main(args):
         return
     
     try:
-        log.debug(f'''URL: "{url} ({token})"''')
+        log.debug(f'''URL: "{url}"''')
         response = requests.request('POST', f'''{url}/start/{job_id}''', timeout=3,
             json={
                 'token': token,
@@ -66,32 +66,33 @@ def main(args):
     log.debug(f'''[{job_id}] Watching for file "{manifest_file_path}"...''')
     log_file_size = 0
     log_watch_start = time.time()
-    while not os.path.isfile(manifest_file_path):
+    while True:
+    # while not os.path.isfile(finished_file_path):
         ## If there is not `manifest.yaml` file but there is a `finished` file, then 
         ## there was an error.
         if os.path.isfile(finished_file_path):
-            try:
-                os.unlink(finished_file_path)
-            except:
-                log.error(f'''[{job_id}] Error deleting finished file "{finished_file_path}"''')
-            report_job_ended(url=url, job_id=job_id, token=token, phase='error')
+            # try:
+            #     os.unlink(finished_file_path)
+            # except:
+            #     log.error(f'''[{job_id}] Error deleting finished file "{finished_file_path}"''')
+            report_job_ended(url=url, job_id=job_id, token=token, phase='completed')
             return
         ## Verify that the job log file is changing
-        elif os.path.isfile(log_file_path):
-            try:
-                current_time = time.time()
-                if current_time - log_watch_start >= logFilePollingPeriod:
-                    log_watch_start = current_time
-                    log_file_size_updated = os.stat(log_file_path).st_size
-                    ## If the log file size has not changed, report the job as aborted.
-                    if log_file_size == log_file_size_updated:
-                        log.warning(f'''[{job_id}] Job log file has not changed in {logFilePollingPeriod} seconds. Aborting...''')
-                        report_job_ended(url=url, job_id=job_id, token=token, phase='aborted')
-                        return
-                    else:
-                        log_file_size = log_file_size_updated
-            except Exception as e:
-                log.error(f'''[{job_id}] Error monitoring log file size: {e}''')
+        # elif os.path.isfile(log_file_path):
+        #     try:
+        #         current_time = time.time()
+        #         if current_time - log_watch_start >= logFilePollingPeriod:
+        #             log_watch_start = current_time
+        #             log_file_size_updated = os.stat(log_file_path).st_size
+        #             ## If the log file size has not changed, report the job as aborted.
+        #             if log_file_size == log_file_size_updated:
+        #                 log.warning(f'''[{job_id}] Job log file has not changed in {logFilePollingPeriod} seconds. Aborting...''')
+        #                 report_job_ended(url=url, job_id=job_id, token=token, phase='aborted')
+        #                 return
+        #             else:
+        #                 log_file_size = log_file_size_updated
+        #     except Exception as e:
+        #         log.error(f'''[{job_id}] Error monitoring log file size: {e}''')
                     
         time.sleep(5)
 
