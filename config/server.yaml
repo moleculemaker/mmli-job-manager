@@ -47,7 +47,7 @@ uws:
         cpu: "1"
         memory: "16Gi"
       requests:
-        cpu: "0.5"
+        cpu: "1"
         memory: "12Gi"
   ## Server working directory to store generated job data
   workingVolume:
