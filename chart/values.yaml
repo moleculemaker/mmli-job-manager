@@ -4,7 +4,7 @@ ingress:
   annotations: {}
 
 controller:
-  image: moleculemaker/mmli-job-manager
+  image: moleculemaker/mmli-job-manager:main
 
 persistence:
   # Set this to use a particular StorageClass
