@@ -57,55 +57,15 @@ def main(args):
     except Timeout:
         log.warning(f'''Timeout posting job started.''')
     
-    ## Watch the filesystem for the manifest.yaml file that indicates the job is complete
+    ## Watch the filesystem for the file that indicates the job is complete
     ##
-    manifest_file_path = os.path.join(files_dir, 'manifest.yaml')
     finished_file_path = os.path.join(files_dir, 'finished')
-    log_file_path = os.path.join(files_dir, 'job.log')
-    logFilePollingPeriod = config['uws']['job']['logFilePollingPeriod']
-    log.debug(f'''[{job_id}] Watching for file "{manifest_file_path}"...''')
-    log_file_size = 0
-    log_watch_start = time.time()
+    log.debug(f'''[{job_id}] Watching for file "{finished_file_path}"...''')
     while True:
-    # while not os.path.isfile(finished_file_path):
-        ## If there is not `manifest.yaml` file but there is a `finished` file, then 
-        ## there was an error.
         if os.path.isfile(finished_file_path):
-            # try:
-            #     os.unlink(finished_file_path)
-            # except:
-            #     log.error(f'''[{job_id}] Error deleting finished file "{finished_file_path}"''')
             report_job_ended(url=url, job_id=job_id, token=token, phase='completed')
             return
-        ## Verify that the job log file is changing
-        # elif os.path.isfile(log_file_path):
-        #     try:
-        #         current_time = time.time()
-        #         if current_time - log_watch_start >= logFilePollingPeriod:
-        #             log_watch_start = current_time
-        #             log_file_size_updated = os.stat(log_file_path).st_size
-        #             ## If the log file size has not changed, report the job as aborted.
-        #             if log_file_size == log_file_size_updated:
-        #                 log.warning(f'''[{job_id}] Job log file has not changed in {logFilePollingPeriod} seconds. Aborting...''')
-        #                 report_job_ended(url=url, job_id=job_id, token=token, phase='aborted')
-        #                 return
-        #             else:
-        #                 log_file_size = log_file_size_updated
-        #     except Exception as e:
-        #         log.error(f'''[{job_id}] Error monitoring log file size: {e}''')
-                    
         time.sleep(5)
-
-    ## Report that the job is complete
-    ##
-    try:
-        log.debug(f'''[{job_id}] Waiting 5 sec before deleting "{finished_file_path}"...''')
-        time.sleep(5)
-        if os.path.isfile(finished_file_path):
-            os.unlink(finished_file_path)
-    except:
-        log.error(f'''[{job_id}] Error deleting finished file "{finished_file_path}"''')
-    report_job_ended(url=url, job_id=job_id, token=token, phase='completed')
 
 if __name__ == "__main__":
     import argparse
