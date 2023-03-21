@@ -646,9 +646,7 @@ class CLEANStatusJobHandler(BaseHandler):
                     responseList = []
                     for job in job_list:
                         job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
-                        date_time_obj = datetime.strptime(job['time_created'], '%Y-%m-%d %H:%M:%S')
-                        date_time_obj_utc = utc_timezone.localize(date_time_obj)
-                        iso_8601_str = date_time_obj_utc.isoformat()
+                        iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
                         responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
                         responseList.append(responseObject)
                     self.send_response(responseList, indent=2)
@@ -687,7 +685,8 @@ class CLEANStatusJobHandler(BaseHandler):
             if property and property in valid_properties.keys():
                 job = job[valid_properties[property]]
             job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
-            responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': job['time_created']}
+            iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
+            responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
             self.send_response(responseObject, indent=2)
             self.finish()
             return
@@ -747,9 +746,7 @@ class CLEANResultJobHandler(BaseHandler):
             job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
             output_dir = '/app/results/inputs/'
             fileName = job['job_id'] + '_maxsep.csv'
-            date_time_obj = datetime.strptime(job['time_created'], '%Y-%m-%d %H:%M:%S')
-            date_time_obj_utc = utc_timezone.localize(date_time_obj)
-            iso_8601_str = date_time_obj_utc.isoformat()
+            iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
             responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
             input_str = ''
             with open(output_dir + fileName, 'r') as f:
