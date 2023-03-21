@@ -7,6 +7,7 @@ import tornado.template
 import tornado.escape
 import json
 from datetime import datetime
+import pytz
 import bcrypt
 import time
 from dbconnector import DbConnector
@@ -26,6 +27,7 @@ APPCONFIG = {
     # 'auth_token': os.environ['SPT_API_TOKEN'],
     'baseUrl': 'https://mmli.clean.com',
 }
+utc_timezone = pytz.timezone('UTC')
 
 log.info(f"Now starting API server: mysql://{config['db']['user']}:****@{config['db']['host']}:3306/{config['db']['database']}")
 
@@ -644,8 +646,9 @@ class CLEANStatusJobHandler(BaseHandler):
                     responseList = []
                     for job in job_list:
                         job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
-                        date_time_obj = datetime.datetime.strptime(job['time_created'], '%Y-%m-%d %H:%M:%S')
-                        iso_8601_str = date_time_obj.isoformat()
+                        date_time_obj = datetime.strptime(job['time_created'], '%Y-%m-%d %H:%M:%S')
+                        date_time_obj_utc = utc_timezone.localize(date_time_obj)
+                        iso_8601_str = date_time_obj_utc.isoformat()
                         responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
                         responseList.append(responseObject)
                     self.send_response(responseList, indent=2)
@@ -744,8 +747,9 @@ class CLEANResultJobHandler(BaseHandler):
             job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
             output_dir = '/app/results/inputs/'
             fileName = job['job_id'] + '_maxsep.csv'
-            date_time_obj = datetime.datetime.strptime(job['time_created'], '%Y-%m-%d %H:%M:%S')
-            iso_8601_str = date_time_obj.isoformat()
+            date_time_obj = datetime.strptime(job['time_created'], '%Y-%m-%d %H:%M:%S')
+            date_time_obj_utc = utc_timezone.localize(date_time_obj)
+            iso_8601_str = date_time_obj_utc.isoformat()
             responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
             input_str = ''
             with open(output_dir + fileName, 'r') as f:
