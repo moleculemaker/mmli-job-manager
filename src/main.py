@@ -7,6 +7,7 @@ import tornado.template
 import tornado.escape
 import json
 from datetime import datetime
+import pytz
 import bcrypt
 import time
 from dbconnector import DbConnector
@@ -26,6 +27,7 @@ APPCONFIG = {
     # 'auth_token': os.environ['SPT_API_TOKEN'],
     'baseUrl': 'https://mmli.clean.com',
 }
+utc_timezone = pytz.timezone('UTC')
 
 log.info(f"Now starting API server: mysql://{config['db']['user']}:****@{config['db']['host']}:3306/{config['db']['database']}")
 
@@ -595,7 +597,7 @@ class CLEANSubmitJobHandler(BaseHandler):
                     responseBody = {
                         'jobId': job['jobId'],
                         'url' : APPCONFIG['baseUrl'] + '/jobId/' + job['jobId'],
-                        'status' : '1',
+                        'status' : 'executing',
                         'created_at': job['creationTime'] or 0
                     }
                     self.send_response(responseBody, indent=2)
@@ -644,7 +646,8 @@ class CLEANStatusJobHandler(BaseHandler):
                     responseList = []
                     for job in job_list:
                         job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
-                        responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': job['time_created']}
+                        iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
+                        responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
                         responseList.append(responseObject)
                     self.send_response(responseList, indent=2)
                     self.finish()
@@ -682,7 +685,8 @@ class CLEANStatusJobHandler(BaseHandler):
             if property and property in valid_properties.keys():
                 job = job[valid_properties[property]]
             job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
-            responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': job['time_created']}
+            iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
+            responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
             self.send_response(responseObject, indent=2)
             self.finish()
             return
@@ -742,7 +746,8 @@ class CLEANResultJobHandler(BaseHandler):
             job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
             output_dir = '/app/results/inputs/'
             fileName = job['job_id'] + '_maxsep.csv'
-            responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': job['time_created']}
+            iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
+            responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
             input_str = ''
             with open(output_dir + fileName, 'r') as f:
                 input_str = f.read().strip()
