@@ -19,22 +19,23 @@ from requests.exceptions import Timeout
 
 CONFIG = {
     # 'auth_token': os.environ['SPT_API_TOKEN'],
-    'apiBaseUrl': 'http://localhost:8888/api/v1',
+    # 'apiBaseUrl': 'http://localhost:8888/api/v1',
+    'apiBaseUrl': ' https://jobmgr.mmli1.ncsa.illinois.edu/api/v1',
 }
 
 
-def submit_job(echo: str = '', environment: list = [],) -> dict:
+def submit_job(payload: str = '', environment: list = [],) -> dict:
     job_info = {}
     """Submits a MMLI job and returns the complete server response which includes the job ID."""
     ## Validate inputs
     data = {
-        'echo': echo,
+        'input_fasta': payload,
     }
     if environment:
         data['environment'] = environment
     ## Submit job
-    response = requests.request('PUT',
-        f'''{CONFIG['apiBaseUrl']}/uws/job''',
+    response = requests.request('POST',
+        f'''{CONFIG['apiBaseUrl']}/job/submit''',
         # headers={'Authorization': f'''Bearer {CONFIG['auth_token']}'''},
         json=data,
     )
@@ -52,13 +53,16 @@ def get_job_status(job_id: str = '') -> list:
     job_info = {}
     ## Validate inputs
     assert isinstance(job_id, str) or not job_id
-    url = f'''{CONFIG['apiBaseUrl']}/uws/job'''
-    if job_id:
-        url += f'''/{job_id}'''
+    url = f'''{CONFIG['apiBaseUrl']}/job/status'''
+    # if job_id:
+    #     url += f'''/{job_id}'''
     ## Fetch job status
     try:
-        response = requests.request('GET',
+        response = requests.request('POST',
             url,
+            params={
+                'jobId': job_id,
+            },
             # headers={'Authorization': f'''Bearer {CONFIG['auth_token']}'''},
             timeout=3,
         )
@@ -134,8 +138,8 @@ def main():
         ## Select a random job config
         fileIdx = secrets.choice(range(1, 6))
         # fileIdx = 1
-        # fileName = f'''job_config.{fileIdx}.yaml'''
-        fileName = f'''job_config.yaml'''
+        fileName = f'''job_config.{fileIdx}.yaml'''
+        # fileName = f'''job_config.yaml'''
         
         ## Load job configuration
         ##
@@ -147,7 +151,7 @@ def main():
         ##
         print(f'Submitting new MMLI job ({fileName})...')
         job_info = submit_job(
-            echo=job_config['echo'],
+            payload=job_config['input_fasta'],
             environment=[{'name': 'LOG_LEVEL', 'value': 'DEBUG'}]
         )
         if not job_info:
@@ -177,7 +181,7 @@ def main():
                 else:
                     num_jobs = len(job_ids)
                     job_info = job_status
-                    phase = job_info['phase']
+                    phase = job_info['status']
                     if phase in ['completed', 'aborted', 'error']:
                         num_complete += 1
                     else:
