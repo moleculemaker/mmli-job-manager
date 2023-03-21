@@ -595,7 +595,7 @@ class CLEANSubmitJobHandler(BaseHandler):
                     responseBody = {
                         'jobId': job['jobId'],
                         'url' : APPCONFIG['baseUrl'] + '/jobId/' + job['jobId'],
-                        'status' : '1',
+                        'status' : 'executing',
                         'created_at': job['creationTime'] or 0
                     }
                     self.send_response(responseBody, indent=2)
@@ -644,7 +644,9 @@ class CLEANStatusJobHandler(BaseHandler):
                     responseList = []
                     for job in job_list:
                         job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
-                        responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': job['time_created']}
+                        date_time_obj = datetime.datetime.strptime(job['time_created'], '%Y-%m-%d %H:%M:%S')
+                        iso_8601_str = date_time_obj.isoformat()
+                        responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
                         responseList.append(responseObject)
                     self.send_response(responseList, indent=2)
                     self.finish()
@@ -742,7 +744,9 @@ class CLEANResultJobHandler(BaseHandler):
             job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
             output_dir = '/app/results/inputs/'
             fileName = job['job_id'] + '_maxsep.csv'
-            responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': job['time_created']}
+            date_time_obj = datetime.datetime.strptime(job['time_created'], '%Y-%m-%d %H:%M:%S')
+            iso_8601_str = date_time_obj.isoformat()
+            responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
             input_str = ''
             with open(output_dir + fileName, 'r') as f:
                 input_str = f.read().strip()
