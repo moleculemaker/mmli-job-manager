@@ -10,6 +10,10 @@ persistence:
   storageClassName: csi-cinder-sc-retain
   storageSize: "100Gi"
 
+config:
+  server:
+    hostName: "jobmgr.mmli1.ncsa.illinois.edu"
+
 mariadb:
   global:
     storageClass: csi-cinder-sc-retain

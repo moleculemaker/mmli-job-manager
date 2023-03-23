@@ -3,12 +3,15 @@ ingress:
   tls: false
   annotations: {}
 
+# Override config/server.yaml at runtime
+config: {}
+
 controller:
   image: moleculemaker/mmli-job-manager:main
 
 persistence:
-  # Set this to use a particular StorageClass
-  # Unset this to use a clsuter default StorageClass
+  # Set this to use a particular StorageClass (must support ReadWriteMany)
+  # Unset this to use a cluster default StorageClass
   storageClassName: "job-manager-storage-class"
   storageSize: "10Gi"
 

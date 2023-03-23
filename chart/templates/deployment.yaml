@@ -17,16 +17,24 @@ spec:
     spec:
       serviceAccountName: {{ .Release.Name }}-foreman
       volumes:
-        # - name: server-config
-        #   configMap:
-        #     name: {{ .Release.Name }}-config
-        # Volume to host job data
+        # Override config/server.yaml at runtime
+        - name: server-config
+          configMap:
+            name: {{ .Release.Name }}-config
+
+        # Volume to host job data (inputs/outputs/weights)
         - name: "job-output"
           persistentVolumeClaim:
             claimName: "mmli-clean-job-weights" 
       containers:
         - name: jobs-api
           volumeMounts:
+          ## Server configuration
+          - name: config
+            mountPath: /etc/config/server.yaml
+            subPath: server.yaml
+
+          ## Job outputs / results
           - name: "job-output"
             mountPath: "/app/results/inputs"
             subPath: "output"

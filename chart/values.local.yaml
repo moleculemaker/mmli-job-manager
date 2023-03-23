@@ -4,6 +4,11 @@ ingress:
 #persistence:
 #  storageClassName: hostpath
 
+# Override config/server.yaml
+config:
+  server:
+    hostName: "jobmgr.localhost"
+
 mariadb:
   enabled: true
 #  global:
