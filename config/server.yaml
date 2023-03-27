@@ -32,6 +32,13 @@ uws:
       pullSecrets: []
     ## Abort jobs after 3 days regardless of their behavior
     activeDeadlineSeconds: 259200
+
+    # Number of Pod failures tolerated before Job is marked as Failed
+    backoffLimit: 1
+
+    # Sets both completions and parallelism - set to 1 for single process
+    replicas: 1
+
     ## Poll the log file for changes every `logFilePollingPeriod` seconds
     logFilePollingPeriod: 300
     ## CAUTION: Discrepancy between the UID of the image user and the mmli API server UID
