@@ -64,7 +64,7 @@ def main(args):
     while True:
         if os.path.isfile(finished_file_path):
             report_job_ended(url=url, job_id=job_id, token=token, phase='completed')
-            return
+            return 0
         time.sleep(5)
 
 if __name__ == "__main__":
