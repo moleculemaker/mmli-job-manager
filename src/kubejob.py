@@ -242,6 +242,11 @@ def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None
             },
 
             # Main command being run on the Job container
+            # This command does the following:
+                # Creates the input fasta file
+                # Runs the CLEAN command on the input file and stores the output to log file at /uws/jobs/<jobId>/out/log
+                # In case the CLEAN command has an exception, an error file is created at  /uws/jobs/<jobId>/out/error for which the monitor looks for
+                # In an error condition, we still want the entire command to be False so that the "finished" file is not created (it is created as {command} && touch finished), therefore, error condition is ANDed with False
             command=f'''echo {encoded_data} | base64 -d > {mount_path}/{job_id}.fasta && ((python CLEAN_infer_fasta.py --fasta_data {job_id} >> {job_output_dir}/log) || (touch {job_output_dir}/error && false))''',
 
             environment=environment,

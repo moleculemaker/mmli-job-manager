@@ -58,15 +58,17 @@ def main(args):
         log.warning(f'''Timeout posting job started.''')
     
     ## Watch the filesystem for the file that indicates the job is complete
-    ##
     finished_file_path = os.path.join(files_dir, 'finished')
     error_file_path = os.path.join(files_dir, 'error')
     log.debug(f'''[{job_id}] Watching for file "{finished_file_path}" and "{error_file_path}"''')
+    # Monitor checks for the presence of "finished" or "error" file
     while True:
         if os.path.isfile(finished_file_path):
+            # Presence of finished file means that the job has finished executing
             report_job_ended(url=url, job_id=job_id, token=token, phase='completed')
             return 0
         elif os.path.isfile(error_file_path):
+            # Presence of error file means the job had some exception
             report_job_ended(url=url, job_id=job_id, token=token, phase='failed')
             return 1
         time.sleep(20)
