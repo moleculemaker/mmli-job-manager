@@ -21,7 +21,7 @@ def report_job_ended(url='', job_id='', token='', phase='completed', numAttempts
             )
             try:
                 assert response.status_code in [200, 204]
-                log.debug(f'''Sucessfully reported job "{job_id}" finished.''')
+                log.debug(f'''Sucessfully reported job "{job_id}" (finished/error). Please check the log file for futher details.''')
                 return
             except:
                 log.error(f'''Error reporting job "{job_id}" finished: [{response.status_code}] {response.text}''')
@@ -58,14 +58,20 @@ def main(args):
         log.warning(f'''Timeout posting job started.''')
     
     ## Watch the filesystem for the file that indicates the job is complete
-    ##
     finished_file_path = os.path.join(files_dir, 'finished')
-    log.debug(f'''[{job_id}] Watching for file "{finished_file_path}"...''')
+    error_file_path = os.path.join(files_dir, 'error')
+    log.debug(f'''[{job_id}] Watching for file "{finished_file_path}" and "{error_file_path}"''')
+    # Monitor checks for the presence of "finished" or "error" file
     while True:
         if os.path.isfile(finished_file_path):
+            # Presence of finished file means that the job has finished executing
             report_job_ended(url=url, job_id=job_id, token=token, phase='completed')
-            return
-        time.sleep(5)
+            return 0
+        elif os.path.isfile(error_file_path):
+            # Presence of error file means the job had some exception
+            report_job_ended(url=url, job_id=job_id, token=token, phase='failed')
+            return 1
+        time.sleep(20)
 
 if __name__ == "__main__":
     import argparse
