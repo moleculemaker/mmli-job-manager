@@ -26,7 +26,7 @@ db = DbConnector(
 
 APPCONFIG = {
     # 'auth_token': os.environ['SPT_API_TOKEN'],
-    'baseUrl': 'https://mmli.clean.com',
+    'baseUrl': 'https://clean.frontend.mmli1.ncsa.illinois.edu',
 }
 utc_timezone = pytz.timezone('UTC')
 
@@ -200,6 +200,10 @@ class JobReportCompleteHandler(BaseHandler):
             if not job_query:
                 return
             job = job_query[0]
+            if job['phase'] == "completed":
+                email_utils.send_email(job['email'], f'''Result for your CLEAN Job ({job['job_id']}) is ready''', f'''The result for your CLEAN Job is available at {APPCONFIG['baseUrl']}/results/{job['job_id']}/1''')
+            else:
+                email_utils.send_email(job['email'], f'''CLEAN Job {job['job_id']} failed''', f'''An error occurred in computing the result for your CLEAN job.''')
             ## Remove the email address from the job record to mark as sent
             db.update_job(job_id=job_id, email='')
         except Exception as e:
@@ -634,7 +638,7 @@ class CLEANStatusJobHandler(BaseHandler):
             'type': 'type',
             'job_info': 'job_info',
         }
-        fields = ['job_id', 'phase', 'time_created', 'email']
+        fields = ['job_id', 'phase', 'time_created']
         response = {}
         # If no job_id is included in the request URL, return a list of jobs. See:
         # UWS Schema: https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#UWSSchema

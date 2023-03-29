@@ -22,7 +22,9 @@ class SingleEmailHeader(object):
         ## Render email HTML content
         # self.html = self.render(os.path.join(os.path.dirname(__file__), 'templates', template), email_params)
         # self.msg.attach(MIMEText(self.html, 'html'))
-        self.msg.attach(email_params['message'])
+        message_content_text = email_params['message']
+        message_content = MIMEText(message_content_text, "plain")
+        self.msg.attach(message_content)
 
     def render(self, tpl_path, email_params):
         path, filename = os.path.split(tpl_path)
@@ -45,26 +47,3 @@ def send_email(recipients=None, email_subject='', message_body='', template_file
     email = SingleEmailHeader(recipients, email_params, template=template_file)
     email.sendmail()
 
-
-def send_job_complete_email(job={}):
-    assert 'job_id' in job
-    job_output_url = f'''https://{config['server']['hostName']}{os.path.join('/', config['server']['basePath'], '/files/jobs', job['job_id'], 'out')}'''
-    email_subject = f'''SPT-3G job finished: {job['job_id']}'''
-    message_body = f'''
-    <p>
-        <table>
-            <tr><td>Job ID:</td><td><code>{job['job_id']}</code></td></tr>
-            <tr><td>Run ID:</td><td><code>{job['run_id']}</code></td></tr>
-            <tr><td>Status:</td><td><code>{job['phase']}</code></td></tr>
-            <tr><td>Output files:</td><td><a href="{job_output_url}"><code>{job_output_url}</code></a></td></tr>
-            <tr><td>Quick Download:</td><td><code>wget -r -nH -np --content-disposition --reject "index.html*" {job_output_url}</code></td></tr>
-        </table>
-    </p>
-    <p>
-        <b>Note:</b> You have approximately 48 hours to download your job
-        files before they are automatically deleted.
-    </p>
-    '''
-    ## Send the email notification
-    send_email(recipients=job['email'], email_subject=email_subject,
-               message_body=message_body, template_file='email_base.tpl.html')

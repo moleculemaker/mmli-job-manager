@@ -38,42 +38,6 @@ def report_job_ended(url='', job_id='', token='', phase='completed', numAttempts
             log.warning(f'''Timeout posting that job "{job_id}" finished. (Attempt {attemptIdx-1}/{numAttempts})''')
     return
 
-def send_job_status_email(url='', job_id='', phase='completed'):
-    assert job_id and url
-    ## Make several attempts to call the API, tolerating timeouts and other errors
-    try:
-        ## Query the specified job by ID
-        # update_job_status(job_id=job_id)
-        valid_properties = {
-            'phase': 'phase',
-            'user_id': 'results',
-            'command': 'command',
-            'run_id': 'run_id',
-            'email': 'email',
-            'type': 'type',
-            'job_info': 'job_info',
-        }
-        fields = ['job_id', 'phase', 'time_created', 'email']
-        job_list = db.select_job_records(job_id=job_id, fields=fields)
-        try:
-            job = job_list[0]
-        except:
-            job = {}
-        ## TODO: Implement the specific property return if requested
-        ## If a specific job property was requested using an API endpoint
-        ## of the form `/job/[job_id]/[property]]`, return that property only.
-        if property and property in valid_properties.keys():
-            job = job[valid_properties[property]]
-        log.debug(f'''Sending email for job "{job_id}."''')
-        if phase == "completed":
-            email_utils.send_email(job['email'], f'''CLEAN Job {job_id} result ready''', f'''CLEAN Job result available at https://clean.frontend.mmli1.ncsa.illinois.edu/results/{job_id}''')
-        else:
-            email_utils.send_email(job['email'], f'''CLEAN Job {job_id} failed''', f'''An error occurred in computing the result for the CLEAN job.''')
-        return
-    except Exception as e:
-        log.error(f'''Error sending email for job "{job_id}".''')
-        return 
-
 def main(args):
     job_id = args.job
     token = 'dummy'
@@ -110,12 +74,10 @@ def main(args):
         if os.path.isfile(finished_file_path):
             # Presence of finished file means that the job has finished executing
             report_job_ended(url=url, job_id=job_id, token=token, phase='completed')
-            send_job_status_email(url=url, job_id=job_id, phase='completed')
             return 0
         elif os.path.isfile(error_file_path):
             # Presence of error file means the job had some exception
             report_job_ended(url=url, job_id=job_id, token=token, phase='failed')
-            send_job_status_email(url=url, job_id=job_id, phase='failed')
             return 1
         time.sleep(20)
 

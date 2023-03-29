@@ -16,9 +16,9 @@ db:
   pass: ""
   database: ""
 email:
-  server: "outbound-relays.techservices.illinois.edu"
-  fromEmail: "no-reply@illinois.edu"
-  fromName: "no-reply-clean"
+  server: "smtp.ncsa.uiuc.edu"
+  fromEmail: "devnull+clowder@ncsa.illinois.edu"
+  fromName: "no-reply-CLEAN"
 uws:
   job:
     monitorEnabled: true
