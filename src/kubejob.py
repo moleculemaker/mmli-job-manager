@@ -240,7 +240,8 @@ def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None
                 'tag': config['uws']['job']['imageJobMonitor']['tag'],
                 'pull_policy': config['uws']['job']['imageJobMonitor']['pullPolicy'],
             },
-            command=f'''echo {encoded_data} | base64 -d > {mount_path}/{job_id}.fasta && python CLEAN_infer_fasta.py --fasta_data {job_id}''',
+            command=f'''echo {encoded_data} | base64 -d > {mount_path}/{job_id}.fasta''',            
+            # command=f'''echo {encoded_data} | base64 -d > {mount_path}/{job_id}.fasta && python CLEAN_infer_fasta.py --fasta_data {job_id}''',
             # command=f'''echo {encoded_data} | base64 -d > {mount_path}/{job_id}.fasta && sleep 60''',
             # command=f'''mkdir {mount_path}/{job_id}/''',
 

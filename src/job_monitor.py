@@ -4,7 +4,7 @@ import requests
 from requests.exceptions import Timeout
 from global_vars import log, config
 import shutil
-
+import email_utils
 
 def report_job_ended(url='', job_id='', token='', phase='completed', numAttempts=5):
     assert job_id and url

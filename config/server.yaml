@@ -15,6 +15,10 @@ db:
   user: ""
   pass: ""
   database: ""
+email:
+  server: "localhost"
+  from_email: "no-reply@illinois.edu"
+  fromName: "CLEAN-job"
 uws:
   job:
     monitorEnabled: true

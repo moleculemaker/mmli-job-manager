@@ -480,6 +480,9 @@ class CLEANSubmitJobHandler(BaseHandler):
     def post(self):
         try:
             data = json.loads(self.request.body)
+            user_email = 'dummy@example.com'
+            if 'user_email' in data:
+                user_email = data['user_email']
             job_config = ""
             for record in data['input_fasta']:
                 job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
@@ -572,7 +575,7 @@ class CLEANSubmitJobHandler(BaseHandler):
                             'time_start': job['startTime'] or 0,
                             'time_end': job['endTime'] or 0,
                             'user_agent': user_agent,
-                            'email': 'dummy@example.com',
+                            'email': user_email,
                             'job_info': json.dumps(job, default = self.json_converter),
                             'queue_position': queue_position,
                             }
