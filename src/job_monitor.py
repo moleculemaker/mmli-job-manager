@@ -5,7 +5,6 @@ from requests.exceptions import Timeout
 from global_vars import log, config
 import shutil
 
-
 def report_job_ended(url='', job_id='', token='', phase='completed', numAttempts=5):
     assert job_id and url
     ## Make several attempts to call the API, tolerating timeouts and other errors

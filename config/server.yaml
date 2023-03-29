@@ -15,6 +15,10 @@ db:
   user: ""
   pass: ""
   database: ""
+email:
+  server: "smtp.ncsa.uiuc.edu"
+  fromEmail: "devnull+clean@ncsa.illinois.edu"
+  fromName: "no-reply-CLEAN"
 uws:
   job:
     monitorEnabled: true

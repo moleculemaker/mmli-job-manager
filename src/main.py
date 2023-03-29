@@ -14,6 +14,7 @@ from dbconnector import DbConnector
 import re
 from mimetypes import guess_type
 from jobutils import valid_job_id, construct_job_object
+import email_utils
 
 # Get global instance of the job handler database interface
 db = DbConnector(
@@ -25,7 +26,7 @@ db = DbConnector(
 
 APPCONFIG = {
     # 'auth_token': os.environ['SPT_API_TOKEN'],
-    'baseUrl': 'https://mmli.clean.com',
+    'baseUrl': 'https://clean.frontend.mmli1.ncsa.illinois.edu',
 }
 utc_timezone = pytz.timezone('UTC')
 
@@ -199,6 +200,10 @@ class JobReportCompleteHandler(BaseHandler):
             if not job_query:
                 return
             job = job_query[0]
+            if job['phase'] == "completed":
+                email_utils.send_email(job['email'], f'''Result for your CLEAN Job ({job['job_id']}) is ready''', f'''The result for your CLEAN Job is available at {APPCONFIG['baseUrl']}/results/{job['job_id']}/1''')
+            else:
+                email_utils.send_email(job['email'], f'''CLEAN Job {job['job_id']} failed''', f'''An error occurred in computing the result for your CLEAN job.''')
             ## Remove the email address from the job record to mark as sent
             db.update_job(job_id=job_id, email='')
         except Exception as e:
@@ -480,6 +485,9 @@ class CLEANSubmitJobHandler(BaseHandler):
     def post(self):
         try:
             data = json.loads(self.request.body)
+            user_email = 'dummy@example.com'
+            if 'user_email' in data:
+                user_email = data['user_email']
             job_config = ""
             for record in data['input_fasta']:
                 job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
@@ -572,7 +580,7 @@ class CLEANSubmitJobHandler(BaseHandler):
                             'time_start': job['startTime'] or 0,
                             'time_end': job['endTime'] or 0,
                             'user_agent': user_agent,
-                            'email': 'dummy@example.com',
+                            'email': user_email,
                             'job_info': json.dumps(job, default = self.json_converter),
                             'queue_position': queue_position,
                             }
