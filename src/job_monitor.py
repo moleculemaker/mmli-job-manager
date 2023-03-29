@@ -64,6 +64,7 @@ def send_job_status_email(url='', job_id='', phase='completed'):
         ## of the form `/job/[job_id]/[property]]`, return that property only.
         if property and property in valid_properties.keys():
             job = job[valid_properties[property]]
+        log.debug(f'''Sending email for job "{job_id}."''')
         if phase == "completed":
             email_utils.send_email(job['email'], f'''CLEAN Job {job_id} result ready''', f'''CLEAN Job result available at https://clean.frontend.mmli1.ncsa.illinois.edu/results/{job_id}''')
         else:
