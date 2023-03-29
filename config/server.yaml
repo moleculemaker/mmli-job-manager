@@ -17,7 +17,7 @@ db:
   database: ""
 email:
   server: "smtp.ncsa.uiuc.edu"
-  fromEmail: "devnull+clowder@ncsa.illinois.edu"
+  fromEmail: "devnull+clean@ncsa.illinois.edu"
   fromName: "no-reply-CLEAN"
 uws:
   job:

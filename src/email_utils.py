@@ -18,7 +18,7 @@ class SingleEmailHeader(object):
         self.msg = MIMEMultipart('alternative')
         self.msg['Subject'] = email_params['subject']
         self.msg['From'] = formataddr((str(Header(self.from_name, 'utf-8')), self.from_email))
-        self.msg['To'] = ', '.join(self.recipients)
+        self.msg['To'] = self.recipients
         ## Render email HTML content
         # self.html = self.render(os.path.join(os.path.dirname(__file__), 'templates', template), email_params)
         # self.msg.attach(MIMEText(self.html, 'html'))
@@ -38,8 +38,8 @@ class SingleEmailHeader(object):
 
 
 def send_email(recipients=None, email_subject='', message_body='', template_file=None):
-    if not isinstance(recipients, list):
-        recipients = [recipients]
+    if isinstance(recipients, list):
+        recipients = recipients[0]
     email_params = {
         "subject": email_subject,
         "message": message_body,
