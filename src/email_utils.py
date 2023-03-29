@@ -22,6 +22,7 @@ class SingleEmailHeader(object):
         ## Render email HTML content
         # self.html = self.render(os.path.join(os.path.dirname(__file__), 'templates', template), email_params)
         # self.msg.attach(MIMEText(self.html, 'html'))
+        self.msg.attach(email_params['message'])
 
     def render(self, tpl_path, email_params):
         path, filename = os.path.split(tpl_path)

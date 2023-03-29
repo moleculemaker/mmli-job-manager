@@ -109,12 +109,12 @@ def main(args):
         if os.path.isfile(finished_file_path):
             # Presence of finished file means that the job has finished executing
             report_job_ended(url=url, job_id=job_id, token=token, phase='completed')
-            # send_job_status_email(url=url, job_id=job_id, phase='completed')
+            send_job_status_email(url=url, job_id=job_id, phase='completed')
             return 0
         elif os.path.isfile(error_file_path):
             # Presence of error file means the job had some exception
             report_job_ended(url=url, job_id=job_id, token=token, phase='failed')
-            # send_job_status_email(url=url, job_id=job_id, phase='failed')
+            send_job_status_email(url=url, job_id=job_id, phase='failed')
             return 1
         time.sleep(20)
 

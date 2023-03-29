@@ -691,11 +691,6 @@ class CLEANStatusJobHandler(BaseHandler):
             job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
             iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
             responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
-            try:
-                # email_utils.send_email(job['email'], f'''CLEAN Job {job['job_id']} result ready''', f'''CLEAN Job result available at https://clean.frontend.mmli1.ncsa.illinois.edu/results/{job['job_id']}''')
-                email_utils.send_job_complete_email({'job_id':job['job_id'], 'phase': job['phase'], 'run_id': job['job_id'], 'email': job['email']})
-            except Exception as e:
-                log.error(str(e))
             self.send_response(responseObject, indent=2)
             self.finish()
             return
