@@ -18,7 +18,7 @@ db:
 email:
   server: "outbound-relays.techservices.illinois.edu"
   fromEmail: "no-reply@illinois.edu"
-  fromName: "no-reply"
+  fromName: "no-reply-clean"
 uws:
   job:
     monitorEnabled: true
