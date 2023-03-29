@@ -4,15 +4,6 @@ import requests
 from requests.exceptions import Timeout
 from global_vars import log, config
 import shutil
-import email_utils
-from dbconnector import DbConnector
-
-db = DbConnector(
-    mysql_host=config['db']['host'],
-    mysql_user=config['db']['user'],
-    mysql_password=config['db']['pass'],
-    mysql_database=config['db']['database'],
-)
 
 def report_job_ended(url='', job_id='', token='', phase='completed', numAttempts=5):
     assert job_id and url
