@@ -14,6 +14,7 @@ from dbconnector import DbConnector
 import re
 from mimetypes import guess_type
 from jobutils import valid_job_id, construct_job_object
+import email_utils
 
 # Get global instance of the job handler database interface
 db = DbConnector(
@@ -633,7 +634,7 @@ class CLEANStatusJobHandler(BaseHandler):
             'type': 'type',
             'job_info': 'job_info',
         }
-        fields = ['job_id', 'phase', 'time_created']
+        fields = ['job_id', 'phase', 'time_created', 'email']
         response = {}
         # If no job_id is included in the request URL, return a list of jobs. See:
         # UWS Schema: https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#UWSSchema
@@ -690,6 +691,11 @@ class CLEANStatusJobHandler(BaseHandler):
             job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
             iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
             responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
+            try:
+                # email_utils.send_email(job['email'], f'''CLEAN Job {job['job_id']} result ready''', f'''CLEAN Job result available at https://clean.frontend.mmli1.ncsa.illinois.edu/results/{job['job_id']}''')
+                email_utils.send_job_complete_email({'job_id':job['job_id'], 'phase': job['phase'], 'run_id': job['job_id'], 'email': job['email']})
+            except Exception as e:
+                log.error(str(e))
             self.send_response(responseObject, indent=2)
             self.finish()
             return

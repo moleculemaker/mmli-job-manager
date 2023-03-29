@@ -20,15 +20,15 @@ class SingleEmailHeader(object):
         self.msg['From'] = formataddr((str(Header(self.from_name, 'utf-8')), self.from_email))
         self.msg['To'] = ', '.join(self.recipients)
         ## Render email HTML content
-        self.html = self.render(os.path.join(os.path.dirname(__file__), 'templates', template), email_params)
-        self.msg.attach(MIMEText(self.html, 'html'))
+        # self.html = self.render(os.path.join(os.path.dirname(__file__), 'templates', template), email_params)
+        # self.msg.attach(MIMEText(self.html, 'html'))
 
     def render(self, tpl_path, email_params):
         path, filename = os.path.split(tpl_path)
         return jinja2.Environment(loader=jinja2.FileSystemLoader(path or './')).get_template(filename).render(email_params)
 
     def sendmail(self):
-        smtp_server = smtplib.SMTP(self.server)
+        smtp_server = smtplib.SMTP(self.server, port=25)
         # The TO and CC header fields are populated by the header construction, and any additional recipient addresses are effectively BCC
         smtp_server.sendmail(self.from_email, self.recipients, self.msg.as_string())
         smtp_server.quit()
