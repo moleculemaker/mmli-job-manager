@@ -15,6 +15,7 @@ import re
 from mimetypes import guess_type
 from jobutils import valid_job_id, construct_job_object
 import email_utils
+import time
 
 # Get global instance of the job handler database interface
 db = DbConnector(
@@ -208,7 +209,6 @@ class JobReportCompleteHandler(BaseHandler):
             db.update_job(job_id=job_id, email='')
         except Exception as e:
             log.error(f'''Error sending job completion email "{job_id}": {e}''')
-
 
 
 class JobHandler(BaseHandler):
@@ -481,6 +481,8 @@ class ResultFileHandler(BaseHandler):
             self.finish()
             return
 
+dict_client_recent_timestamp = {}
+dict_client_backoff= {}
 class CLEANSubmitJobHandler(BaseHandler):
     def post(self):
         try:
@@ -491,7 +493,6 @@ class CLEANSubmitJobHandler(BaseHandler):
             job_config = ""
             for record in data['input_fasta']:
                 job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
-            # echo = "Hello World!"
 
             ## Command that the job container will execute. The `$JOB_OUTPUT_DIR` environment variable is
             ## populated at run time after a job ID and output directory have been provisioned.
@@ -523,6 +524,25 @@ class CLEANSubmitJobHandler(BaseHandler):
             ## Obtain user ID from auth token
             # user_id = self._token_decoded["user_id"]
             user_id = 'DummyID'
+
+            # Check client IP
+            client_ip = self.request.remote_ip
+            if client_ip in dict_client_recent_timestamp:
+                delta = time.time() - dict_client_recent_timestamp[client_ip]
+                if delta < 60:
+                    failed_response = {
+                        'jobId': 'failedJobId',
+                        'url' : 'dummy_url',
+                        'status' : 'failed',
+                        'created_at': 0
+                    }
+
+                    self.send_response(failed_response, indent=2)
+                    self.finish()
+
+            # Update with latest time 
+            dict_client_recent_timestamp[client_ip] = time.time
+
         except Exception as e:
             self.send_response(
                 str(e), http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
