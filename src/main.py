@@ -537,14 +537,14 @@ class CLEANSubmitJobHandler(BaseHandler):
                         'created_at': 0
                     }
 
-                    dict_client_recent_timestamp[client_ip] = time.time
+                    dict_client_recent_timestamp[client_ip] = time.time()
                     dict_client_backoff[client_ip] = dict_client_backoff[client_ip] + 1
                     self.send_response(failed_response, indent=2)
                     self.finish()
                     return
 
             # Update with latest time 
-            dict_client_recent_timestamp[client_ip] = time.time
+            dict_client_recent_timestamp[client_ip] = time.time()
             dict_client_backoff[client_ip] = 1
 
         except Exception as e:
