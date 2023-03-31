@@ -532,7 +532,7 @@ class CLEANSubmitJobHandler(BaseHandler):
             log.debug('===== Current request client IP ====== {}'.format(client_ip))
             if client_ip in dict_client_recent_timestamp:
                 delta = time.time() - dict_client_recent_timestamp[client_ip]
-                if delta < 60 * dict_client_backoff[client_ip]:
+                if delta < 300 * dict_client_backoff[client_ip]:
                     failed_response = {
                         'jobId': 'failedJobId',
                         'url' : 'dummy_url',
