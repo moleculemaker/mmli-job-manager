@@ -526,7 +526,9 @@ class CLEANSubmitJobHandler(BaseHandler):
             user_id = 'DummyID'
 
             # Check client IP
-            client_ip = self.request.remote_ip
+            client_ip = self.request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+            if not client_ip:
+                lient_ip = self.request.remote_ip
             log.debug('===== Current request client IP ====== {}'.format(client_ip))
             if client_ip in dict_client_recent_timestamp:
                 delta = time.time() - dict_client_recent_timestamp[client_ip]
