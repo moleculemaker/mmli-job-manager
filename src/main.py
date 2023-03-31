@@ -529,7 +529,7 @@ class CLEANSubmitJobHandler(BaseHandler):
             client_ip = self.request.remote_ip
             if client_ip in dict_client_recent_timestamp:
                 delta = time.time() - dict_client_recent_timestamp[client_ip]
-                if delta < 60:
+                if delta < 60 * dict_client_backoff[client_ip]:
                     failed_response = {
                         'jobId': 'failedJobId',
                         'url' : 'dummy_url',
@@ -537,11 +537,15 @@ class CLEANSubmitJobHandler(BaseHandler):
                         'created_at': 0
                     }
 
+                    dict_client_recent_timestamp[client_ip] = time.time
+                    dict_client_backoff[client_ip] = dict_client_backoff[client_ip] + 1
                     self.send_response(failed_response, indent=2)
                     self.finish()
+                    return
 
             # Update with latest time 
             dict_client_recent_timestamp[client_ip] = time.time
+            dict_client_backoff[client_ip] = 1
 
         except Exception as e:
             self.send_response(
