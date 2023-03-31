@@ -485,6 +485,18 @@ dict_client_recent_timestamp = {}
 dict_client_backoff= {}
 class CLEANSubmitJobHandler(BaseHandler):
     def post(self):
+
+        failed_response = {
+                        'jobId': 'failedJobId',
+                        'url' : 'dummy_url',
+                        'status' : 'failed',
+                        'created_at': 0
+                    }
+        
+        self.send_response(failed_response, indent=2)
+        self.finish()
+        return
+
         try:
             data = json.loads(self.request.body)
             user_email = 'dummy@example.com'
