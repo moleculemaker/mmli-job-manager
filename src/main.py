@@ -495,6 +495,12 @@ class CLEANSubmitJobHandler(BaseHandler):
     def post(self):
         try:
             data = json.loads(self.request.body)
+
+            # Temperorily stopping jobs from other users
+            # If key "test" is set to true, then proceed
+            if not "test" in data:
+                raise Exception('Due to high load, we are not accepting new jobs.')
+
             user_email = 'dummy@example.com'
             job_config = ""
             
