@@ -511,7 +511,7 @@ class CLEANSubmitJobHandler(BaseHandler):
                         raise Exception('Invalid FASTA Protein Sequence')
                     job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
             except Exception as e:
-                self.send_response(self.validation_failed_response(str(e)), http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
+                self.send_response(self.validation_failed_response(str(e.args[0])), http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
                 self.finish()
                 return
 
