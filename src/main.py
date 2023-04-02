@@ -482,23 +482,38 @@ class ResultFileHandler(BaseHandler):
             return
 
 class CLEANSubmitJobHandler(BaseHandler):
+    def failed_job_response(self, message):
+        responseBody = {
+            'jobId': 'failed_job_id',
+            'url' : APPCONFIG['baseUrl'] + '/jobId/' + 'failed_job_id',
+            'status' : 'failed',
+            'created_at': 0,
+            'message': message
+        }
+        return responseBody
+        
     def post(self):
         try:
             data = json.loads(self.request.body)
             user_email = 'dummy@example.com'
+            job_config = ""
+            
+            if len(data) == 0:
+                raise Exception('JSON body is empty.')
             if 'user_email' in data:
                 user_email = data['user_email']
-            job_config = ""
+            
+            # Convert JSON to FASTA format
             for record in data['input_fasta']:
+                # Check for valid amino acid characters
+                if not re.match('^[ACDEFGHIKLMNPQRSTVWY]+$', record["sequence"]):
+                    raise Exception('Invalid FASTA Protein Sequence')
                 job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
-            # echo = "Hello World!"
+
 
             ## Command that the job container will execute. The `$JOB_OUTPUT_DIR` environment variable is
             ## populated at run time after a job ID and output directory have been provisioned.
             command = f'''cat /tmp/input.fasta'''
-            # log.debug(f"Job command: {command}")
-
-            ## Options:
 
             ## environment is a list of environment variable names and values like [{'name': 'env1', 'value': 'val1'}]
             environment = self.getarg('environment', default=[]) # optional
@@ -517,15 +532,11 @@ class CLEANSubmitJobHandler(BaseHandler):
             ##   - https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
             run_id = self.getarg('run_id', default='') # optional
             if run_id and (not isinstance(run_id, str) or run_id != re.sub(r'[^-._a-zA-Z0-9]', "", run_id) or not re.match(r'[a-zA-Z0-9]', run_id)):
-                self.send_response('Invalid run_id. Must be 63 characters or less and begin with alphanumeric character and contain only dashes (-), underscores (_), dots (.), and alphanumerics between.', http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
-                self.finish()
-                return
-            ## Obtain user ID from auth token
-            # user_id = self._token_decoded["user_id"]
+                raise Exception('Invalid run_id. Must be 63 characters or less and begin with alphanumeric character and contain only dashes (-), underscores (_), dots (.), and alphanumerics between.')
             user_id = 'DummyID'
         except Exception as e:
             self.send_response(
-                str(e), http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+                self.failed_job_response(str(e.args[0])), http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
             self.finish()
             return
 
