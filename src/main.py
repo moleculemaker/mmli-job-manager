@@ -482,7 +482,7 @@ class ResultFileHandler(BaseHandler):
             return
 
 class CLEANSubmitJobHandler(BaseHandler):
-    def validation_failed_response(message):
+    def validation_failed_response(self, message):
         responseBody = {
             'jobId': 'failed_job_id',
             'url' : APPCONFIG['baseUrl'] + '/jobId/' + 'failed_job_id',
@@ -511,7 +511,7 @@ class CLEANSubmitJobHandler(BaseHandler):
                         raise Exception('Invalid FASTA Protein Sequence')
                     job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
             except Exception as e:
-                self.send_response(self.validation_failed_response(str(e.args[0])), http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
+                self.send_response(self.validation_failed_response(e.args[0]), http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
                 self.finish()
                 return
 
