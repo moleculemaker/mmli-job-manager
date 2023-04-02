@@ -482,23 +482,42 @@ class ResultFileHandler(BaseHandler):
             return
 
 class CLEANSubmitJobHandler(BaseHandler):
+    def validation_failed_response(message):
+        responseBody = {
+            'jobId': 'failed_job_id',
+            'url' : APPCONFIG['baseUrl'] + '/jobId/' + 'failed_job_id',
+            'status' : 'failed',
+            'created_at': 0,
+            'message': message
+        }
+        return responseBody
+        
     def post(self):
         try:
             data = json.loads(self.request.body)
             user_email = 'dummy@example.com'
-            if 'user_email' in data:
-                user_email = data['user_email']
             job_config = ""
-            for record in data['input_fasta']:
-                job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
-            # echo = "Hello World!"
+            
+            try:
+                if len(data) == 0:
+                    raise Exception('JSON body is empty.')
+                if 'user_email' in data:
+                    user_email = data['user_email']
+                
+                # Convert JSON to FASTA format
+                for record in data['input_fasta']:
+                    # Check for valid amino acid characters
+                    if not re.match('^[ACDEFGHIKLMNPQRSTVWY]+$', record["sequence"]):
+                        raise Exception('Invalid FASTA Protein Sequence')
+                    job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
+            except e:
+                self.send_response(self.validation_failed_response(str(e)), http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
+                self.finish()
+                return
 
             ## Command that the job container will execute. The `$JOB_OUTPUT_DIR` environment variable is
             ## populated at run time after a job ID and output directory have been provisioned.
             command = f'''cat /tmp/input.fasta'''
-            # log.debug(f"Job command: {command}")
-
-            ## Options:
 
             ## environment is a list of environment variable names and values like [{'name': 'env1', 'value': 'val1'}]
             environment = self.getarg('environment', default=[]) # optional
