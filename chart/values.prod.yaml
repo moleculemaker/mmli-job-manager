@@ -17,3 +17,8 @@ mariadb:
   auth:
     username: mmli
     existingSecret: "job-manager-mariadb"
+
+hcaptcha:
+  auth:
+    existingSecret: "hcaptcha"
+
