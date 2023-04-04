@@ -15,6 +15,8 @@ import re
 from mimetypes import guess_type
 from jobutils import valid_job_id, construct_job_object
 import email_utils
+import requests
+from requests.exceptions import Timeout
 
 # Get global instance of the job handler database interface
 db = DbConnector(
@@ -491,6 +493,30 @@ class CLEANSubmitJobHandler(BaseHandler):
             'message': message
         }
         return responseBody
+    
+    def verify_captcha(self, captcha_token):
+        hcaptcha_secret = kubejob.getSecret('hcaptcha', 'secret')
+        try:
+            response = requests.request('POST', f'''https://hcaptcha.com/siteverify''', timeout=2,
+                data={
+                    'secret': hcaptcha_secret,
+                    'response': captcha_token,
+                }
+            )
+            try:
+                assert response.status_code in [200, 204]
+                result = response.json()
+                if result['success'] == True:
+                    return True
+                else:
+                    log.error(f'''Invalid CAPTCHA''')
+                    return False
+            except:
+                log.error(f'''Could not verify CAPTCHA''')
+                return False
+        except Timeout:
+            log.warning(f'''Could not verify CAPTCHA''')
+            return False
         
     def post(self):
         try:
@@ -502,6 +528,11 @@ class CLEANSubmitJobHandler(BaseHandler):
                 raise Exception('JSON body is empty.')
             if 'user_email' in data:
                 user_email = data['user_email']
+            if 'captcha_token' in data:
+                if not self.verify_captcha(data['captcha_token']):
+                    raise Exception('Captcha is invalid.')
+            else:
+                raise Exception('Captcha is missing.')
             
             # Convert JSON to FASTA format
             for record in data['input_fasta']:
@@ -536,7 +567,7 @@ class CLEANSubmitJobHandler(BaseHandler):
             user_id = 'DummyID'
         except Exception as e:
             self.send_response(
-                self.failed_job_response(str(e.args[0])), http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+                self.failed_job_response(str(e.args[0])), http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
             self.finish()
             return
 
