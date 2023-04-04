@@ -139,6 +139,8 @@ spec:
           value: ""
         - name: MARIADB_HOST
           value: ""
+        - name: HCAPTCHA_SECRET
+          value: ""
         lifecycle:
           preStop:
             exec:

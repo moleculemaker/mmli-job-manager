@@ -283,8 +283,3 @@ def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None
         response['message'] = msg
         response['status'] = global_vars.STATUS_ERROR
     return response
-
-def getSecret(name, field):
-    secret = api_v1.read_namespaced_secret(name, 'job-manager')
-    api_secret = base64.b64decode(secret.data[field]).decode('utf-8')
-    return api_secret

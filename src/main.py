@@ -495,7 +495,7 @@ class CLEANSubmitJobHandler(BaseHandler):
         return responseBody
     
     def verify_captcha(self, captcha_token):
-        hcaptcha_secret = kubejob.getSecret('captcha-secret', 'captcha-key')
+        hcaptcha_secret = config['hcaptcha']['secret']
         try:
             response = requests.request('POST', f'''https://hcaptcha.com/siteverify''', timeout=2,
                 data={

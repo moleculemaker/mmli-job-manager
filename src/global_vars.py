@@ -34,6 +34,7 @@ config['db']['host'] = os.environ.get('MARIADB_HOST', config['db']['host'])
 config['db']['user'] = os.environ.get('MARIADB_USER', config['db']['user'])
 config['db']['pass'] = os.environ.get('MARIADB_PASSWORD', config['db']['pass'])
 config['db']['database'] = os.environ.get('MARIADB_DATABASE', config['db']['database'])
+config['hcaptcha']['secret'] = os.environ.get('HCAPTCHA_SECRET', config['hcaptcha']['secret'])
 
 # Configure logging
 logging.basicConfig(

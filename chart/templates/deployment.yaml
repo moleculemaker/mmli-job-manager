@@ -54,6 +54,12 @@ spec:
           - name: MARIADB_USER
             value: {{ .Values.mariadb.auth.username }}
 
+          - name: HCAPTCHA_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.mariadb.auth.existingSecret }}
+                key: secret
+
           ports:
             - containerPort: 8888
           imagePullPolicy: Always
