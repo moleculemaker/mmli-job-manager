@@ -509,7 +509,7 @@ class CLEANSubmitJobHandler(BaseHandler):
                 if result['success'] == True:
                     return True
                 else:
-                    log.error(f'''Invalid CAPTCHA''')
+                    log.error(f'''Invalid CAPTCHA {result['success']}''')
                     return False
             except:
                 log.error(f'''Could not verify CAPTCHA''')
