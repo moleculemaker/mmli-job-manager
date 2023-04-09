@@ -31,7 +31,7 @@ uws:
     image:
       repository: "moleculemaker/clean-image-amd64"
       tag: "latest"
-      pullPolicy: "IfNotPresent"
+      pullPolicy: "Always"
       ## Image pull secrets if necessary
       # pullSecrets:
       # - name: my-secret
