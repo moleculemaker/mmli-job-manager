@@ -35,6 +35,8 @@ config['db']['user'] = os.environ.get('MARIADB_USER', config['db']['user'])
 config['db']['pass'] = os.environ.get('MARIADB_PASSWORD', config['db']['pass'])
 config['db']['database'] = os.environ.get('MARIADB_DATABASE', config['db']['database'])
 config['hcaptcha']['secret'] = os.environ.get('HCAPTCHA_SECRET', config['hcaptcha']['secret'])
+config['oauth']['userInfoUrl'] = os.environ.get('OAUTH_USERINFO_URL', config['oauth']['userInfoUrl'])
+config['oauth']['cookieName'] = os.environ.get('OAUTH_COOKIE_NAME', config['oauth']['cookieName'])
 
 # Configure logging
 logging.basicConfig(
