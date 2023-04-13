@@ -20,8 +20,8 @@ from requests.exceptions import Timeout
 
 CONFIG = {
     # 'auth_token': os.environ['SPT_API_TOKEN'],
-    'apiBaseUrl': 'http://localhost:8888/api/v1',
-    #'apiBaseUrl': ' https://jobmgr.mmli1.ncsa.illinois.edu/api/v1',
+    #'apiBaseUrl': 'http://localhost:8888/api/v1',
+    'apiBaseUrl': ' https://jobmgr.mmli1.ncsa.illinois.edu/api/v1',
 }
 
 
@@ -157,6 +157,7 @@ def main():
             job_config = yaml.load(conf_file, Loader=yaml.FullLoader)
         # print(yaml.dump(job_config, indent=2))
 
+        # FIXME: remove quotes from token arg
         # Include our OAuth2 Proxy token cookie
         token = args.token.replace('"', '').replace("'", '')
 
@@ -164,7 +165,6 @@ def main():
         ##
         print(f'Submitting new MMLI job ({fileName}) with token={token}')
         job_info = submit_job(
-            # FIXME: remove quotes from token arg
             token=token,
             payload=job_config['input_fasta'],
             environment=[{'name': 'LOG_LEVEL', 'value': 'DEBUG'}]
