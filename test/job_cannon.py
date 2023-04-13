@@ -1,3 +1,4 @@
+#!/bin/env python
 import os
 import sys
 import requests
@@ -19,12 +20,12 @@ from requests.exceptions import Timeout
 
 CONFIG = {
     # 'auth_token': os.environ['SPT_API_TOKEN'],
-    # 'apiBaseUrl': 'http://localhost:8888/api/v1',
-    'apiBaseUrl': ' https://jobmgr.mmli1.ncsa.illinois.edu/api/v1',
+    'apiBaseUrl': 'http://localhost:8888/api/v1',
+    #'apiBaseUrl': ' https://jobmgr.mmli1.ncsa.illinois.edu/api/v1',
 }
 
 
-def submit_job(payload: str = '', environment: list = [],) -> dict:
+def submit_job(token: str, payload: str = '', environment: list = []) -> dict:
     job_info = {}
     """Submits a MMLI job and returns the complete server response which includes the job ID."""
     ## Validate inputs
@@ -33,11 +34,14 @@ def submit_job(payload: str = '', environment: list = [],) -> dict:
     }
     if environment:
         data['environment'] = environment
+
+    cookies = {'_oauth2_proxy': token}
     ## Submit job
     response = requests.request('POST',
         f'''{CONFIG['apiBaseUrl']}/job/submit''',
         # headers={'Authorization': f'''Bearer {CONFIG['auth_token']}'''},
         json=data,
+        cookies=cookies
     )
     try:
         assert response.status_code in [200, 204]
@@ -119,6 +123,7 @@ def main():
     parser.add_argument('--num', nargs='?', type=int, default=0, help='number of jobs to launch')
     parser.add_argument('--poll', action='store_true')
     parser.add_argument('--delete', action='store_true')
+    parser.add_argument('--token', nargs='?', type=str, default=0, help='auth token to use when')
     args = parser.parse_args()
     
     ## Delete all jobs
@@ -129,6 +134,11 @@ def main():
             print(f'''Deleting {job_info['job_id']}...''')
             delete_job(job_info['job_id'])
         sys.exit(0)
+
+    ## Check for token
+    if not args.token:
+        print(f'''OAuth2 Proxy Token is required to submit jobs. Please use the --token flag to pass in a valid _oauth2_proxy token to include as a cookie.''')
+        sys.exit(401)
 
     ## Submit new jobs
     ##
@@ -146,11 +156,16 @@ def main():
         with open(fileName, "r") as conf_file:
             job_config = yaml.load(conf_file, Loader=yaml.FullLoader)
         # print(yaml.dump(job_config, indent=2))
-        
+
+        # Include our OAuth2 Proxy token cookie
+        token = args.token.replace('"', '').replace("'", '')
+
         ## Submit new MMLI job
         ##
-        print(f'Submitting new MMLI job ({fileName})...')
+        print(f'Submitting new MMLI job ({fileName}) with token={token}')
         job_info = submit_job(
+            # FIXME: remove quotes from token arg
+            token=token,
             payload=job_config['input_fasta'],
             environment=[{'name': 'LOG_LEVEL', 'value': 'DEBUG'}]
         )
