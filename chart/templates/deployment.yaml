@@ -54,11 +54,13 @@ spec:
           - name: MARIADB_USER
             value: {{ .Values.mariadb.auth.username }}
 
+{{- if .Values.hcaptcha.auth.existingSecret }}
           - name: HCAPTCHA_SECRET
             valueFrom:
               secretKeyRef:
                 name: {{ .Values.hcaptcha.auth.existingSecret }}
                 key: secret
+{{- end }}
 
           ports:
             - containerPort: 8888

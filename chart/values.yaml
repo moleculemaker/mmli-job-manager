@@ -12,6 +12,10 @@ persistence:
   storageClassName: "job-manager-storage-class"
   storageSize: "10Gi"
 
+hcaptcha:
+  auth:
+    existingSecret: ""
+
 # https://artifacthub.io/packages/helm/bitnami/mariadb?modal=values
 mariadb:
   enabled: true
