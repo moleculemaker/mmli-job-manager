@@ -575,7 +575,7 @@ class CLEANSubmitJobHandler(BaseHandler):
             user_id = 'DummyID'
         except Exception as e:
             self.send_response(
-                self.failed_job_response(str(e.args[0])), http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
+                self.failed_job_response(str(e)), http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
             self.finish()
             return
 
@@ -871,7 +871,7 @@ class CLEANAddMailingListHandler(BaseHandler):
         except Exception as e:
             insert_fail_json = {
                 'status':'false',
-                'message': str(e.args[0])
+                'message': str(e)
             }
             self.send_response(data=insert_fail_json, http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
             self.finish()
@@ -890,7 +890,7 @@ class CLEANRemoveMailingListHandler(BaseHandler):
         except Exception as e:
             insert_fail_json = {
                 'status':'false',
-                'message': str(e.args[0])
+                'message': str(e)
             }
             self.send_response(data=insert_fail_json, http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
             self.finish()

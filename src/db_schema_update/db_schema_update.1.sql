@@ -40,8 +40,7 @@ CREATE TABLE IF NOT EXISTS `stats_jobs`(
 )
 #---
 CREATE TABLE IF NOT EXISTS `mailing_list`(
-    `id` int NOT NULL AUTO_INCREMENT,
-    'email' varchar(320) NOT NULL,
+    `email` varchar(320) NOT NULL,
     `time_created` datetime NOT NULL DEFAULT 0,
     PRIMARY KEY (`email`), UNIQUE KEY `email` (`email`)
 )
