@@ -599,9 +599,6 @@ class CLEANSubmitJobHandler(BaseHandler):
             job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
 
 
-        ## Command that the job container will execute. The `$JOB_OUTPUT_DIR` environment variable is
-        ## populated at run time after a job ID and output directory have been provisioned.
-        command = f'''cat /tmp/input.fasta'''
 
         ## environment is a list of environment variable names and values like [{'name': 'env1', 'value': 'val1'}]
         environment = self.getarg('environment', default=[]) # optional
@@ -623,13 +620,25 @@ class CLEANSubmitJobHandler(BaseHandler):
             raise Exception('Invalid run_id. Must be 63 characters or less and begin with alphanumeric character and contain only dashes (-), underscores (_), dots (.), and alphanumerics between.')
         user_id = 'DummyID'
 
+        # Build up path to output dir
+        # FIXME: feature envy?
+        job_id = kubejob.generate_uuid()
+        job_root_dir = kubejob.get_job_root_dir_from_id(job_id)
+        job_output_dir = os.path.join(job_root_dir, 'out')
+
+        ## Command that the job container will execute. The `$JOB_OUTPUT_DIR` environment variable is
+        ## populated at run time after a job ID and output directory have been provisioned.
+        encoded_data = base64.b64encode(job_config.encode('utf-8')).decode('utf-8')
+        mount_path = '/app/data/inputs'
+        command = f'''echo {encoded_data} | base64 -d > {mount_path}/{run_id}.fasta && ((python CLEAN_infer_fasta.py --fasta_data {run_id} >> {job_output_dir}/log) || (touch {job_output_dir}/error && false))'''
+
         response = kubejob.create_job(
             command=command,
+            job_id=job_id,
             run_id=run_id,
             owner_id=user_id,
             replicas=replicas,
-            environment=environment,
-            job_config=job_config,
+            environment=environment
         )
         log.debug(response)
         if response['status'] != global_vars.STATUS_OK:

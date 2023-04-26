@@ -163,7 +163,7 @@ def delete_job(job_id: str) -> None:
     #     raise
 
 
-def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None, job_config=None):
+def create_job(command, job_id=None, run_id=None, owner_id=None, replicas=1, environment=None):
     response = {
         'job_id': None,
         'message': None,
@@ -171,7 +171,8 @@ def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None
     }
     try:
         namespace = get_namespace()
-        job_id = generate_uuid()
+        if not job_id:
+            job_id = generate_uuid()
         if not run_id:
             run_id = job_id
         job_name = get_job_name_from_id(job_id)
