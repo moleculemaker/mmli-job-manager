@@ -623,6 +623,8 @@ class CLEANSubmitJobHandler(BaseHandler):
         # Build up path to output dir
         # FIXME: feature envy?
         job_id = kubejob.generate_uuid()
+        if not run_id:
+            run_id = job_id
         job_root_dir = kubejob.get_job_root_dir_from_id(job_id)
         job_output_dir = os.path.join(job_root_dir, 'out')
 
