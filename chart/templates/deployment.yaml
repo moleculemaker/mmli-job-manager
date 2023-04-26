@@ -27,7 +27,7 @@ spec:
       initContainers:
         - name: init-pvc-subpaths    
           image: busybox
-          command: ['sh', '-c', 'mkdir /app/data/input; mkdir /app/data/output; mkdir /app/data/weights; mkdir /app/data/uws']
+          command: ['sh', '-c', 'mkdir -p /app/data/input; mkdir -p /app/data/output; mkdir -p /app/data/weights; mkdir -p /app/data/uws']
           volumeMounts:
           - name: "job-output"
             mountPath: "/app/data/"
