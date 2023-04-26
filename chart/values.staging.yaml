@@ -6,6 +6,9 @@ ingress:
     kubernetes.io/tls-acme: "true"
     traefik.ingress.kubernetes.io/router.tls: "true"
 
+controller:
+  image: moleculemaker/mmli-job-manager:staging
+
 persistence:
   existingClaim: "mmli-clean-job-weights"
   storageClassName: csi-cinder-sc-retain
