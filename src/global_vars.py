@@ -29,15 +29,6 @@ VALID_JOB_STATUSES = [
 with open('/etc/config/server.yaml', "r") as conf_file:
     config = yaml.load(conf_file, Loader=yaml.FullLoader)
 
-## Load secrets from env vars (compatible with Kubernetes Secrets)
-config['db']['host'] = os.environ.get('MARIADB_HOST', config['db']['host'])
-config['db']['user'] = os.environ.get('MARIADB_USER', config['db']['user'])
-config['db']['pass'] = os.environ.get('MARIADB_PASSWORD', config['db']['pass'])
-config['db']['database'] = os.environ.get('MARIADB_DATABASE', config['db']['database'])
-config['hcaptcha']['secret'] = os.environ.get('HCAPTCHA_SECRET', config['hcaptcha']['secret'])
-config['oauth']['userInfoUrl'] = os.environ.get('OAUTH_USERINFO_URL', config['oauth']['userInfoUrl'])
-config['oauth']['cookieName'] = os.environ.get('OAUTH_COOKIE_NAME', config['oauth']['cookieName'])
-
 # Configure logging
 logging.basicConfig(
     format='%(asctime)s [%(name)-12s] %(levelname)-8s %(message)s',
@@ -47,6 +38,37 @@ try:
     log.setLevel(config['server']['logLevel'].upper())
 except:
     log.setLevel('WARNING')
+
+def override_conf_section(section_name, conf, overrides):
+    sectionconf = conf[section_name]
+    conf_overrides = overrides[section_name] if section_name in overrides else {}
+    sectionconf.update(conf_overrides)
+    return sectionconf
+
+try:
+    ## Override default config file
+    with open('/etc/config/overrides/server.override.yaml', "r") as conf_file:
+        conf_overrides = yaml.load(conf_file, Loader=yaml.FullLoader)
+        config['server'] = override_conf_section('server', config, conf_overrides)
+        config['db'] = override_conf_section('db', config, conf_overrides)
+        config['oauth'] = override_conf_section('oauth', config, conf_overrides)
+        config['email'] = override_conf_section('email', config, conf_overrides)
+        config['uws'] = override_conf_section('uws', config, conf_overrides)
+        config['hcaptcha'] = override_conf_section('hcaptcha', config, conf_overrides)
+
+        log.debug('Overridden config values: ', config)
+except Exception as e:
+    log.warning('Failed to override config values: ', str(e))
+    pass
+
+## Load secrets from env vars (compatible with Kubernetes Secrets)
+config['db']['host'] = os.environ.get('MARIADB_HOST', config['db']['host'])
+config['db']['user'] = os.environ.get('MARIADB_USER', config['db']['user'])
+config['db']['pass'] = os.environ.get('MARIADB_PASSWORD', config['db']['pass'])
+config['db']['database'] = os.environ.get('MARIADB_DATABASE', config['db']['database'])
+config['hcaptcha']['secret'] = os.environ.get('HCAPTCHA_SECRET', config['hcaptcha']['secret'])
+config['oauth']['userInfoUrl'] = os.environ.get('OAUTH_USERINFO_URL', config['oauth']['userInfoUrl'])
+config['oauth']['cookieName'] = os.environ.get('OAUTH_COOKIE_NAME', config['oauth']['cookieName'])
 
 ## Load secret configuration
 
