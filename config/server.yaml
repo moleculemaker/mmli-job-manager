@@ -18,9 +18,7 @@ db:
 hcaptcha:
   secret: "ChangeThisInProduction"
 oauth:
-  # FIXME: may need to support hostAlias to .localhost here
-  #userInfoUrl: "http://oauth.proxy.localhost"
-  userInfoUrl: "https://mmli1.ncsa.illinois.edu/oauth2/userinfo"
+  userInfoUrl: "http://oauth2-proxy.oauth2-proxy.svc.cluster.local/oauth2/userinfo"
   cookieName: "_oauth2_proxy"
 email:
   server: "smtp.ncsa.uiuc.edu"
