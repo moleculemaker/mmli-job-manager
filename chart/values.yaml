@@ -1,5 +1,5 @@
 ingress:
-  hostname: jobmgr.localhost
+  hostname: jobmgr.proxy.localhost
   tls: false
   annotations: {}
 
