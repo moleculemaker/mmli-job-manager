@@ -1,8 +1,22 @@
 ingress:
   ingressClassName: nginx
+  hostname: jobmgr.proxy.localhost
+  tls: true
+  annotations:
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://clean.proxy.localhost"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
 
-#persistence:
-#  storageClassName: hostpath
+
+persistence:
+  existingClaim: ""  # use locally mounted data instead
+
+  # Override the default StorageClass
+  storageClassName: hostpath
+
+  # EXPERIMENTAL: Set this to enable mounting a directory into this volume from host
+  # hostpath: /Users/lambert8/workspace/mmli/mmli-job-manager/data
+
 
 controller:
   image: moleculemaker/mmli-job-manager:dev
@@ -17,3 +31,39 @@ mariadb:
     password: "mmli"
     username: "mmli"
     database: "mmli"
+
+config:
+  server:
+    protocol: "https"
+    ## API hostname. Must match the ingress.hostname value.
+    hostName: "jobmgr.proxy.localhost"
+    namespace: "mmli"
+  hcaptcha:
+    secret: "ChangeThisInProduction"
+  oauth:
+    userInfoUrl: "http://oauth2-proxy.mmli.svc.cluster.local/oauth2/userinfo"
+  uws:
+    ## Server working directory to store generated job data
+    workingVolume:
+      claimName: "job-manager-pvc"
+      mountPath: "/uws"
+      subPath: "uws"
+    ## Central data volumes to be mounted in job containers
+    volumes:
+      - name: 'job-output'
+        mountPath: '/app/data/inputs'
+        subPath: 'input'
+        claimName: 'job-manager-pvc'
+      - name: 'job-output'
+        mountPath: '/app/results/inputs'
+        subPath: 'output'
+        claimName: 'job-manager-pvc'
+      - name: 'job-output'
+        mountPath: '/root/.cache/torch/hub/checkpoints'
+        subPath: 'weights'
+        claimName: 'job-manager-pvc'
+    # - name: data
+    #   claimName: mmli-data-pvc
+    #   mountPath: "/data/mmli"
+    #   subPath: ""
+    #   readOnly: true

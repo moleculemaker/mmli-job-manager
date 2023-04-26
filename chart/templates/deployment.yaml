@@ -17,16 +17,26 @@ spec:
     spec:
       serviceAccountName: {{ .Release.Name }}-foreman
       volumes:
-        # - name: server-config
-        #   configMap:
-        #     name: {{ .Release.Name }}-config
+        - name: server-config
+          configMap:
+            name: {{ .Release.Name }}-config
         # Volume to host job data
         - name: "job-output"
           persistentVolumeClaim:
-            claimName: "mmli-clean-job-weights" 
+            claimName: {{ .Values.persistence.existingClaim | default "job-manager-pvc" | quote }}
+      initContainers:
+        - name: init-pvc-subpaths    
+          image: busybox
+          command: ['sh', '-c', 'mkdir /app/data/input; mkdir /app/data/output; mkdir /app/data/weights; mkdir /app/data/uws']
+          volumeMounts:
+          - name: "job-output"
+            mountPath: "/app/data/"
       containers:
         - name: jobs-api
           volumeMounts:
+          - name: server-config
+            mountPath: /etc/config/overrides/server.override.yaml
+            subPath: server.override.yaml
           - name: "job-output"
             mountPath: "/app/results/inputs"
             subPath: "output"

@@ -6,11 +6,16 @@ ingress:
 controller:
   image: moleculemaker/mmli-job-manager:main
 
+
 persistence:
   # Set this to use a particular StorageClass
-  # Unset this to use a clsuter default StorageClass
-  storageClassName: "job-manager-storage-class"
+  # Unset this to use a cluster default StorageClass
+  storageClassName: ""
+  existingClaim: ""
   storageSize: "10Gi"
+
+  # EXPERIMENTAL: Set this to enable mounting a directory into this volume from host
+  hostpath: ""
 
 hcaptcha:
   auth:
@@ -32,3 +37,6 @@ mariadb:
 
     # Set the name of your mariadb database
     database: "mmli"
+
+# Override server.yaml at runtime
+config: {}
