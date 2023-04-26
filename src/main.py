@@ -567,29 +567,29 @@ class CLEANSubmitJobHandler(BaseHandler):
             user = userinfo.validate_auth_cookie(self.request)
             log.debug('User: ' + str(user))
 
-        if user is None:
-            log.error('401 Unauthorized')
-            self.send_response('401: Unauthorized', http_status_code=401, return_json=False)
-            self.finish()
-            return
-
-
-        # if 'captcha_token' in data:
-        #     # Fallback attempt to hcaptcha without _oauth2_proxy cookie
-        #     if self.verify_captcha(data['captcha_token']):
-        #         pass
-        #     else:
-        #         raise Exception('Captcha is invalid.')
-        # else:
-        #     raise Exception('No authentication included. Please include either captcha_token or _oauth2_proxy cookie with requests')
-
-
-        user_email = user['email']
-        job_config = ""
+        # Parse JSON request body
         data = json.loads(self.request.body)
 
         if len(data) == 0:
             raise Exception('JSON body is empty.')
+
+        if user:
+            user_email = user['email']
+        elif 'captcha_token' in data:
+            log.warning('401 Unauthorized - falling back to captcha')
+            user_email = data['user_email'] if 'user_email' in data else ''
+            # Fallback attempt to hcaptcha without _oauth2_proxy cookie
+            if self.verify_captcha(data['captcha_token']):
+                pass
+            else:
+                raise Exception('Captcha is invalid.')
+        else:
+            # No auth token, no captcha => no access
+            self.send_response('401: Unauthorized', http_status_code=401, return_json=False)
+            self.finish()
+            return
+
+        job_config = ""
 
         # Convert JSON to FASTA format
         for record in data['input_fasta']:
