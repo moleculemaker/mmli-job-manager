@@ -7,6 +7,7 @@ ingress:
     traefik.ingress.kubernetes.io/router.tls: "true"
 
 persistence:
+  existingClaim: "mmli-clean-job-weights"
   storageClassName: csi-cinder-sc-retain
   storageSize: "100Gi"
 
@@ -22,3 +23,36 @@ hcaptcha:
   auth:
     existingSecret: "hcaptcha"
 
+config:
+  server:
+    protocol: "https"
+    ## API hostname. Must match the ingress.hostname value.
+    hostName: "jobmgr.staging.mmli1.ncsa.illinois.edu"
+    namespace: "staging"
+  oauth:
+    userInfoUrl: "http://oauth2-proxy.oauth2-proxy.svc.cluster.local/oauth2/userinfo"
+  uws:
+    ## Server working directory to store generated job data
+    workingVolume:
+      claimName: "mmli-clean-job-weights"
+      mountPath: "/uws"
+      subPath: "uws"
+    ## Central data volumes to be mounted in job containers
+    volumes:
+      - name: 'job-output'
+        mountPath: '/app/data/inputs'
+        subPath: 'input'
+        claimName: 'mmli-clean-job-weights'
+      - name: 'job-output'
+        mountPath: '/app/results/inputs'
+        subPath: 'output'
+        claimName: 'mmli-clean-job-weights'
+      - name: 'job-output'
+        mountPath: '/root/.cache/torch/hub/checkpoints'
+        subPath: 'weights'
+        claimName: 'mmli-clean-job-weights'
+    # - name: data
+    #   claimName: mmli-data-pvc
+    #   mountPath: "/data/mmli"
+    #   subPath: ""
+    #   readOnly: true
