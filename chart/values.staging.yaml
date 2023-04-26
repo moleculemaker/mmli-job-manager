@@ -32,7 +32,7 @@ extraDeploy:
   kind: Middleware
   metadata:
     name: cors-header
-    namespace: job-manager
+    namespace: staging
   spec:
     headers:
       accessControlAllowCredentials: true
