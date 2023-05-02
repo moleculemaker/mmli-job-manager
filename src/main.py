@@ -590,7 +590,6 @@ class CLEANSubmitJobHandler(BaseHandler):
                     raise Exception('Invalid FASTA Protein Sequence')
 
                 sequence_count += 1
-                job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
 
             if sequence_count > 20:
                 raise Exception('CLEAN allows only for a maximum of 20 FASTA Sequences.')
