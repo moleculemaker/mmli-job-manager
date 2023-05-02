@@ -111,6 +111,10 @@ class BaseHandler(tornado.web.RequestHandler):
             self.write(data)
         self.set_status(http_status_code)
 
+    def is_valid_email(self, email):
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        return re.match(pattern, email) is not None
+
 def escape_html(htmlstring):
     escapes = {'\"': '&quot;',
                '\'': '&#39;',
@@ -570,6 +574,7 @@ class CLEANSubmitJobHandler(BaseHandler):
             else:
                 raise Exception('Captcha is missing.')
             
+            sequence_count = 0
             # Convert JSON to FASTA format
             for record in data['input_fasta']:
                 # Check for valid amino acid characters
@@ -583,6 +588,11 @@ class CLEANSubmitJobHandler(BaseHandler):
                         job_config += ">{}\n{}\n".format(record["header"], protein_sequence)
                 else: 
                     raise Exception('Invalid FASTA Protein Sequence')
+
+                sequence_count += 1
+
+            if sequence_count > 20:
+                raise Exception('CLEAN allows only for a maximum of 20 FASTA Sequences.')
 
             ## Command that the job container will execute. The `$JOB_OUTPUT_DIR` environment variable is
             ## populated at run time after a job ID and output directory have been provisioned.
@@ -609,7 +619,7 @@ class CLEANSubmitJobHandler(BaseHandler):
             user_id = 'DummyID'
         except Exception as e:
             self.send_response(
-                self.failed_job_response(str(e.args[0])), http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
+                self.failed_job_response(str(e)), http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
             self.finish()
             return
 
@@ -892,6 +902,44 @@ class CLEANResultJobHandler(BaseHandler):
             return    
 
 
+class CLEANAddMailingListHandler(BaseHandler):
+    def post(self):
+        try:
+            email = self.getarg('email', default='')
+            if not email or not self.is_valid_email(email=email):
+                raise Exception('Invalid Email Address Provided.')
+            db.insert_email_to_mailing_list(email=email)
+            self.send_response({'status': 'true', 'message': 'Added Email to the Mailing List.'})
+            self.finish()
+            return
+        except Exception as e:
+            insert_fail_json = {
+                'status':'false',
+                'message': str(e)
+            }
+            self.send_response(data=insert_fail_json, http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+            self.finish()
+            return
+        
+class CLEANRemoveMailingListHandler(BaseHandler):
+    def post(self):
+        try:
+            email = self.getarg('email', default='')
+            if not email or not self.is_valid_email(email=email):
+                raise Exception('Invalid Email Address Provided.')
+            db.remove_email_from_mailing_list(email=email)
+            self.send_response({'status': 'true', 'message': 'Removed Email from the Mailing List.'})
+            self.finish()
+            return
+        except Exception as e:
+            insert_fail_json = {
+                'status':'false',
+                'message': str(e)
+            }
+            self.send_response(data=insert_fail_json, http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+            self.finish()
+            return
+
 def make_app(app_base_path='/', api_base_path='api', debug=False):
     ## Configure app base path
     app_base_path = f'''/{app_base_path.strip('/')}'''
@@ -917,7 +965,9 @@ def make_app(app_base_path='/', api_base_path='api', debug=False):
             (r"{}/{}/uws/report/end/(.*)".format(app_base_path, api_base_path), JobReportCompleteHandler),
             (r"{}/{}/job/submit".format(app_base_path, api_base_path), CLEANSubmitJobHandler),
             (r"{}/{}/job/status".format(app_base_path, api_base_path), CLEANStatusJobHandler),
-            (r"{}/{}/job/result".format(app_base_path, api_base_path), CLEANResultJobHandler)
+            (r"{}/{}/job/result".format(app_base_path, api_base_path), CLEANResultJobHandler),
+            (r"{}/{}/mailing/add".format(app_base_path, api_base_path), CLEANAddMailingListHandler),
+            (r"{}/{}/mailing/delete".format(app_base_path, api_base_path), CLEANRemoveMailingListHandler),
         ],
         **settings
     )
