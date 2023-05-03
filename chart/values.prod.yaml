@@ -45,7 +45,7 @@ extraDeploy:
             existingSecret: job-manager-mariadb
     global: |
       enabled: true
-      backup-nfs-path: /taiga/ncsa/radiant/bbfp/mmli1/backups/staging/jobmgr
+      backup-nfs-path: /taiga/ncsa/radiant/bbfp/mmli1/backups/jobmgr
       backup-nfs-server: taiga-nfs.ncsa.illinois.edu
 
 # Deploy SealedSecrets for hcaptcha secret
