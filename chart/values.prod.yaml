@@ -22,3 +22,72 @@ hcaptcha:
   auth:
     existingSecret: "hcaptcha"
 
+extraDeploy:
+- apiVersion: bitnami.com/v1alpha1
+  kind: SealedSecret
+  metadata:
+    creationTimestamp: null
+    name: hcaptcha
+    namespace: job-manager
+  spec:
+    encryptedData:
+      secret: AgAX5Xzeavp/TcJ6dkShk526pEZFdoQf5R5TGsdIOoVjHr9Nm3CsYli8WV4q8OMgRzTiSZ4K2aQXM1t8UtcDBIWX0bklsD9D2goTrkqTKJQ9Qk20fbqZb/YYTSc4xDnjtVZ4HKmYER8pqBOtBgoh+QwXee+AcBSZFMrh1djAMW76yxddDRqIQdsGzI53YO/1QnmFWLHEe4ogHhOsADb1pqLYALYVn+zh3FA40jWTHi5e28me+fXJP/y10d9bYpp62VTzEYt778RMeCy0cUR8cxWpHCSJX+ZqPjWCXcJRjhvy+TnCqpY2+kB3BVSFYY55m9WFoUZ2ovj6fCBPPU+BpfcfZlAvT+tkh2xoMT3YB/awsDKAaYPQLWvZ1E0La1KLp9/IIFZVe8BLjdF9gtf7U650OvZ7LMfwvysMnfWL6Z/RPZwft+eEw+YtB691O8cIhmhFLxBQRlpqOWQfLXOm2wakib1DcWL+vnI+nbo2x0qbzSYalSy4LOqG7wWJ4q1O9//1ceuoGESiVPPx7iUGd0HiJPo324tbBevyYVji0wlJpUhwzdqvlyl1XWzDx2I+U8S0ypTpmDpWjONreGf/VNZSJNnih8Qwx7enan79PHxYfj1jfmiCZ6Efni9wctndPAa39AWftnTAA4fXQnUoxhTgo0lLw6NsMNYo2VxUqvG9IhCcOM4BwaRwen32KdsgJmOpku+J6kMpEjQ9E6xAyay8QIaIz6Bw/qwVW+1iFPUa5jiYgPmxPF2Pbx8=
+    template:
+      metadata:
+        creationTimestamp: null
+        name: hcaptcha
+        namespace: job-manager
+      type: Opaque
+- apiVersion: bitnami.com/v1alpha1
+  kind: SealedSecret
+  metadata:
+    creationTimestamp: null
+    name: job-manager-mariadb
+    namespace: job-manager
+  spec:
+    encryptedData:
+      mariadb-password: AgBCuahX0dYLrUCXuZ9XfxtGgsdL+ezWmEZTUJvbucpAwp2C7fNgR02OcVv29Y/eObijlala1duszjfFx+5ifSVR6Vul12oL6oAsidWm3d/D9oB4fLmODFN9p4xlqAkMYpOncjy82JRaBjCMiAYePOrxjbn/wrMfn42wQq05+j+igqApzUp8M4ThY+4wEr5KVmzd4b8hBD44m0jjQZxSzi3A5LToCXcjr8JK9JS0gcENP5S2/40AUbCDphMbgmx8H83XTAIgCpnkrs5Qlwa2D3TkL8kztdKypWymFlpgE3UhplmqiUL/WeOgrhZMi5k8Y/yS8T16eH6VdmtJGJuz6YrYDhjCsXMk6kqD9JilDhxjV4y+sKH/24fQR0pBE1UirBbZWCk3Mh48dLPggsB4zFrmCEdk7L057DYliuaTR0X7PS+iL4asrZQ7OEY6zoGvVvKD/3n6zLRTg1vJoJVO/nu24opdoEj8aNLVWN89hqEOrspMgF3Mix7/TNMry6khjYNOf8mk9g7/pzMygKdHzh4Fvm8TFnc4Qs4mnLuvAQXA75hyAp5NO9A4KuvyGMbi3JlopPikv7CwUv9UovTFZMp05+31a8NeUOqEPa7XP+klBNoX6EaRX+li3kJKc1WiqQim5g63n8JOZWfpM4VZhsr9RpWztatVFgGZD/hy/X4zeRYdCg6dTnP2gczXTpN4ogTTAqd+F6XchxWEq8A9xGm0MjTKSQIIaNo4JxGi4CU=
+      mariadb-replication-password: AgBpl12xabvu5CeK3SOdJ4iddxl4alrTcL5vgw/uB3r/KuiJ0NcmY7IRbdowT41uYQP5lizz2vxwS+oo9ksISStYW9Rz0p1nUFtyW+phd0c8UTAvnMqvnbLXxDFVbaHin53YyKdDfWwOfgEjguvsSpsvYQFueTV/rsn3KN2Sp+BmpkNXKWa+36AVWJNhMUGXUbID+H1hA3qkQRgKuP4bjWePRyGcr+Fm/dg7NPEpsa1Lqfu7mrnpqwySBJbS+I79V3wOrCsYYkLs2o3Gelqhh5U/yEWOxQ960UxGNYuULb6ZdBgNT60c3E2moMlEAp1D3wZ65bzm7U2QVszzD7kyNgAWJUWSZQjBtZ+bNaqu+P0C1fCSUuGAEwQVvxrU9CJygoJJjVsKe+LumhzCH3elGPYJyCqL9MAQQ+BNb/WFnkIkNowaoneLhuO9lTGzW3dt7519VvlfVVHS3Jd0qEcV5w+bgbfryi6ipuBPKRVf/XA1uaj28vSAgKeZaHNV8tqxJ210jR1/a/0OV1sZYrfk52+aZ28pBCiLL5U3Xq6fkpNnMbAPxEBfBNpDHTB3xmouJcB4v2H9uXJyKitOTSCm30CJdnEDscStcUanGxJV902v9m8T38cLp/CAawvtxjM4HP+8Zrzwf65N0wJQSrPnyn9PIcef9nIHI9D9ejWsU80+Sss/INch84i1LyRu2KIM995pWKZTrnK5XylhkgjfGX/8Hm8h8SFRmNe0sjM+xFs=
+      mariadb-root-password: AgCB64flVJbPwy2VDwLJTIOD4y7kF6/VL/IGs8PjJpx2to6WXC5rzLgliAExgUV9S3XPoOMWdyB1Can1kAvaRjikew5DKkMA2BNxAROhACwnblzZ9IW/R9FKZjLqY3i50ji/xTqxEX7gZpKFMhBTaJJYsOu5O/+e2UAfLAGHuMYBRrGPlYiUltLwlVA5tU+3qaBbJUCSbaqG3iAprUyBiWMyAfipXx6ffKG9Q2rBncgyzbMCKrHrKHxTqGEcmIPKiFn6TGAKAxJFrNzrNPqXYezglf244axrFd1aTcuEOkcHWDDwn3loMA/7TWItaoqSGc+RqFwK606P37G/qQ4Zqx4WBpIIMZxOX7SO+0Y+t7wgnwMJiniJItlGrNqy/a/99Fl84Q/3qU3C9ZMneKWewMP79n5Qi3MSYpmvUto4/oNxXCz7TB982+i4enVEuHJAvPJqEWkuwI4Cq59rptKapDPjM7B8qUoRzmAUq2khb0IfRQCBj5ncHrTQzrYioh3DfJ/e3lR1qTLQjTGc62YWws1LohOKAJt8bFgZ+YQ/Rj0W6HUopJ70Z487wQMnlefbvNTJg/lYu6qCzi+Q8PQCsGm5aPdPWXa5cFq1yDVC5ajWHT5mZfww6AeVXUu09KcMzEvYp9m7VVpqrKCU56Kcg2VXpeUqsK2eq1tHqom0ufQiJnaR4ZYEXbzVveQzbvr/qf6HlxsxAxIYJUce9hM5464WizC+FCXwUeu8nsi+ZLw=
+    template:
+      metadata:
+        creationTimestamp: null
+        name: job-manager-mariadb
+        namespace: job-manager
+      type: Opaque
+
+
+
+config:
+  server:
+    protocol: "https"
+    ## API hostname. Must match the ingress.hostname value.
+    hostName: "jobmgr.mmli1.ncsa.illinois.edu"
+    namespace: "job-manager"
+  oauth:
+    userInfoUrl: "http://oauth2-proxy.oauth2-proxy.svc.cluster.local/oauth2/userinfo"
+  uws:
+    ## Server working directory to store generated job data
+    workingVolume:
+      claimName: "mmli-clean-job-weights"
+      mountPath: "/uws"
+      subPath: "uws"
+    ## Central data volumes to be mounted in job containers
+    volumes:
+      - name: 'job-output'
+        mountPath: '/app/data/inputs'
+        subPath: 'input'
+        claimName: 'mmli-clean-job-weights'
+      - name: 'job-output'
+        mountPath: '/app/results/inputs'
+        subPath: 'output'
+        claimName: 'mmli-clean-job-weights'
+      - name: 'job-output'
+        mountPath: '/root/.cache/torch/hub/checkpoints'
+        subPath: 'weights'
+        claimName: 'mmli-clean-job-weights'
+    # - name: data
+    #   claimName: mmli-data-pvc
+    #   mountPath: "/data/mmli"
+    #   subPath: ""
+    #   readOnly: true

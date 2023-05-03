@@ -6,9 +6,12 @@ ingress:
 controller:
   image: moleculemaker/mmli-job-manager:main
 
+backups:
+  enabled: false
+
 persistence:
   # Set this to use a particular StorageClass
-  # Unset this to use a clsuter default StorageClass
+  # Unset this to use the cluster default StorageClass
   storageClassName: "job-manager-storage-class"
   storageSize: "10Gi"
 
