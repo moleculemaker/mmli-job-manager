@@ -611,7 +611,12 @@ class CLEANSubmitJobHandler(BaseHandler):
         data = json.loads(self.request.body)
 
         if len(data) == 0:
-            raise Exception('JSON body is empty.')
+            # Invalid DNA Sequence, return 400
+            self.send_response(data='400: Bad Request - JSON body expected',
+                               http_status_code=400,
+                               return_json=False)
+            self.finish()
+            return
 
         if user:
             user_email = user['email']
@@ -622,10 +627,17 @@ class CLEANSubmitJobHandler(BaseHandler):
             if self.verify_captcha(data['captcha_token']):
                 pass
             else:
-                raise Exception('Captcha is invalid.')
+                # No auth token, no captcha => no access
+                self.send_response(data='401: Unauthorized',
+                                   http_status_code=401,
+                                   return_json=False)
+                self.finish()
+                return
         else:
             # No auth token, no captcha => no access
-            self.send_response('401: Unauthorized', http_status_code=401, return_json=False)
+            self.send_response(data='401: Unauthorized',
+                               http_status_code=401,
+                               return_json=False)
             self.finish()
             return
 
@@ -640,16 +652,31 @@ class CLEANSubmitJobHandler(BaseHandler):
             elif re.match('^[ACGTURYSWKMBDHVN]*$', record["DNA_sequence"]):
                 protein_sequence = self.getProteinSeqFromDNA(record["DNA_sequence"])
                 if protein_sequence == '':
-                    raise Exception('Invalid DNA Sequence')
+                    # Invalid DNA Sequence, return 400
+                    self.send_response(data='400: Bad Request - Invalid DNA Sequence',
+                                       http_status_code=400,
+                                       return_json=False)
+                    self.finish()
+                    return
                 else:
                     job_config += ">{}\n{}\n".format(record["header"], protein_sequence)
             else:
-                raise Exception('Invalid FASTA Protein Sequence')
+                # Invalid FASTA Sequence, return 400
+                self.send_response(data='400: Bad Request - Invalid FASTA Protein Sequence',
+                                   http_status_code=400,
+                                   return_json=False)
+                self.finish()
+                return
 
             sequence_count += 1
 
         if sequence_count > 20:
-            raise Exception('CLEAN allows only for a maximum of 20 FASTA Sequences.')
+            # Invalid FASTA Sequence, return 400
+            self.send_response(data='400: Bad Request - CLEAN allows only for a maximum of 20 FASTA Sequences.',
+                               http_status_code=400,
+                               return_json=False)
+            self.finish()
+            return
 
         ## environment is a list of environment variable names and values like [{'name': 'env1', 'value': 'val1'}]
         environment = self.getarg('environment', default=[]) # optional
@@ -668,7 +695,13 @@ class CLEANSubmitJobHandler(BaseHandler):
         ##   - https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
         run_id = self.getarg('run_id', default='') # optional
         if run_id and (not isinstance(run_id, str) or run_id != re.sub(r'[^-._a-zA-Z0-9]', "", run_id) or not re.match(r'[a-zA-Z0-9]', run_id)):
-            raise Exception('Invalid run_id. Must be 63 characters or less and begin with alphanumeric character and contain only dashes (-), underscores (_), dots (.), and alphanumerics between.')
+            # Invalid FASTA Sequence, return 400
+            self.send_response(data='400: Bad Request - Invalid run_id. Must be 63 characters or less and begin with alphanumeric character and contain only dashes (-), underscores (_), dots (.), and alphanumerics between.',
+                               http_status_code=400,
+                               return_json=False)
+            self.finish()
+            return
+
         user_id = 'DummyID'
 
         # Build up path to output dir
