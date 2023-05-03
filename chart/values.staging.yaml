@@ -27,6 +27,7 @@ hcaptcha:
     existingSecret: "hcaptcha"
 
 extraDeploy:
+# Deploy CORS middleware for staging namespace
 - apiVersion: traefik.containo.us/v1alpha1
   kind: Middleware
   metadata:
@@ -54,6 +55,32 @@ extraDeploy:
       - https://jobmgr.mmli1.ncsa.illinois.edu
       - https://jobmgr.staging.mmli1.ncsa.illinois.edu
 
+# Enable DecentCI backups
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: backups
+    labels:
+      app.kubernetes.io/name: decentci-backups
+      app.kubernetes.io/component: config
+  data:
+    backups: |
+      - backup-name: decentci-backups-jobmgr-db
+        schedule: "01 7 * * *"
+        database:
+          type: mysql
+          host: job-manager-staging-mariadb.staging.svc.cluster.local
+          auth:
+            username: mmli
+            database: mmli
+            passwordKey: mariadb-password
+            existingSecret: job-manager-mariadb
+    global: |
+      enabled: true
+      backup-nfs-path: /taiga/ncsa/radiant/bbfp/mmli1/backups/staging/jobmgr
+      backup-nfs-server: taiga-nfs.ncsa.illinois.edu
+
+# Deploy SealedSecret for database credentials
 - apiVersion: bitnami.com/v1alpha1
   kind: SealedSecret
   metadata:
@@ -71,6 +98,8 @@ extraDeploy:
         name: job-manager-mariadb
         namespace: staging
       type: Opaque
+
+# Deploy SealedSecret for hcaptcha secret
 - apiVersion: bitnami.com/v1alpha1
   kind: SealedSecret
   metadata:

@@ -23,6 +23,32 @@ hcaptcha:
     existingSecret: "hcaptcha"
 
 extraDeploy:
+# Enable DecentCI backups
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: backups
+    labels:  
+      app.kubernetes.io/name: decentci-backups
+      app.kubernetes.io/component: config
+  data:
+    backups: |
+      - backup-name: decentci-backups-jobmgr-db
+        schedule: "01 7 * * *"
+        database:
+          type: mysql
+          host: job-manager-mariadb.job-manager.svc.cluster.local
+          auth:
+            username: mmli
+            database: mmli
+            passwordKey: mariadb-password
+            existingSecret: job-manager-mariadb
+    global: |
+      enabled: true
+      backup-nfs-path: /taiga/ncsa/radiant/bbfp/mmli1/backups/staging/jobmgr
+      backup-nfs-server: taiga-nfs.ncsa.illinois.edu
+
+# Deploy SealedSecrets for hcaptcha secret
 - apiVersion: bitnami.com/v1alpha1
   kind: SealedSecret
   metadata:
@@ -38,6 +64,8 @@ extraDeploy:
         name: hcaptcha
         namespace: job-manager
       type: Opaque
+
+# Deploy SealedSecrets for database credentials
 - apiVersion: bitnami.com/v1alpha1
   kind: SealedSecret
   metadata:
