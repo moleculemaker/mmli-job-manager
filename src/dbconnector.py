@@ -381,3 +381,27 @@ class DbConnector:
             log.error(e)
             self.close_db_connection()
             raise
+
+    def insert_email_to_mailing_list(self, email) -> None:
+        self.open_db_connection()
+        try:
+            self.cur.execute(
+                (f"INSERT IGNORE INTO `mailing_list` (`email`, `time_created`) VALUES ('{email}', '{datetime.utcnow()}')")
+            )
+            self.close_db_connection()
+        except Exception as e:
+            log.error(e)
+            self.close_db_connection()
+            raise
+    
+    def remove_email_from_mailing_list(self, email) -> None:
+        self.open_db_connection()
+        try:
+            self.cur.execute(
+                (f"DELETE IGNORE FROM `mailing_list` where email = '{email}'")
+            )
+            self.close_db_connection()
+        except Exception as e:
+            log.error(e)
+            self.close_db_connection()
+            raise

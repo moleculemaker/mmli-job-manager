@@ -115,6 +115,10 @@ class BaseHandler(tornado.web.RequestHandler):
             self.write(data)
         self.set_status(http_status_code)
 
+    def is_valid_email(self, email):
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        return re.match(pattern, email) is not None
+
 def escape_html(htmlstring):
     escapes = {'\"': '&quot;',
                '\'': '&#39;',
@@ -560,6 +564,42 @@ class CLEANSubmitJobHandler(BaseHandler):
             log.warning(f'''Could not verify CAPTCHA''')
             return False
         
+    def getProteinSeqFromDNA(self, DNA_sequence):
+        # define a codon table as a dictionary
+        codon_table = {
+            'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
+            'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACT':'T',
+            'AAC':'N', 'AAT':'N', 'AAA':'K', 'AAG':'K',
+            'AGC':'S', 'AGT':'S', 'AGA':'R', 'AGG':'R',                
+            'CTA':'L', 'CTC':'L', 'CTG':'L', 'CTT':'L',
+            'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCT':'P',
+            'CAC':'H', 'CAT':'H', 'CAA':'Q', 'CAG':'Q',
+            'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGT':'R',
+            'GTA':'V', 'GTC':'V', 'GTG':'V', 'GTT':'V',
+            'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCT':'A',
+            'GAC':'D', 'GAT':'D', 'GAA':'E', 'GAG':'E',
+            'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',
+            'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',
+            'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',
+            'TAC':'Y', 'TAT':'Y', 'TAA':'*', 'TAG':'*',
+            'TGC':'C', 'TGT':'C', 'TGA':'*', 'TGG':'W',
+        }
+
+        nucleotide_seq = DNA_sequence
+
+        # assert that the length of the nucleotide sequence is a multiple of 3
+        if len(nucleotide_seq) % 3 != 0:
+            log.error(f'''Length of nucleotide sequence is not a multiple of 3''')
+            return ''
+        # split the nucleotide sequence into codons
+        codons = [nucleotide_seq[i:i+3] for i in range(0, len(nucleotide_seq), 3)]
+        # translate each codon into its corresponding amino acid
+        amino_acids = [codon_table[codon] for codon in codons]
+        # join the resulting amino acid sequence into a string
+        amino_acid_seq = "".join(amino_acids)
+        # print the resulting amino acid sequence
+        return amino_acid_seq
+        
     def post(self):
         user = None
         if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
@@ -591,14 +631,25 @@ class CLEANSubmitJobHandler(BaseHandler):
 
         job_config = ""
 
+        sequence_count = 0
         # Convert JSON to FASTA format
         for record in data['input_fasta']:
             # Check for valid amino acid characters
-            if not re.match('^[ACDEFGHIKLMNPQRSTVWY]+$', record["sequence"]):
+            if re.match('^[ACDEFGHIKLMNPQRSTVWY]+$', record["sequence"]):
+                job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
+            elif re.match('^[ACGTURYSWKMBDHVN]*$', record["DNA_sequence"]):
+                protein_sequence = self.getProteinSeqFromDNA(record["DNA_sequence"])
+                if protein_sequence == '':
+                    raise Exception('Invalid DNA Sequence')
+                else:
+                    job_config += ">{}\n{}\n".format(record["header"], protein_sequence)
+            else:
                 raise Exception('Invalid FASTA Protein Sequence')
-            job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
 
+            sequence_count += 1
 
+        if sequence_count > 20:
+            raise Exception('CLEAN allows only for a maximum of 20 FASTA Sequences.')
 
         ## environment is a list of environment variable names and values like [{'name': 'env1', 'value': 'val1'}]
         environment = self.getarg('environment', default=[]) # optional
@@ -933,6 +984,44 @@ class CLEANResultJobHandler(BaseHandler):
             return    
 
 
+class CLEANAddMailingListHandler(BaseHandler):
+    def post(self):
+        try:
+            email = self.getarg('email', default='')
+            if not email or not self.is_valid_email(email=email):
+                raise Exception('Invalid Email Address Provided.')
+            db.insert_email_to_mailing_list(email=email)
+            self.send_response({'status': 'true', 'message': 'Added Email to the Mailing List.'})
+            self.finish()
+            return
+        except Exception as e:
+            insert_fail_json = {
+                'status':'false',
+                'message': str(e)
+            }
+            self.send_response(data=insert_fail_json, http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+            self.finish()
+            return
+        
+class CLEANRemoveMailingListHandler(BaseHandler):
+    def post(self):
+        try:
+            email = self.getarg('email', default='')
+            if not email or not self.is_valid_email(email=email):
+                raise Exception('Invalid Email Address Provided.')
+            db.remove_email_from_mailing_list(email=email)
+            self.send_response({'status': 'true', 'message': 'Removed Email from the Mailing List.'})
+            self.finish()
+            return
+        except Exception as e:
+            insert_fail_json = {
+                'status':'false',
+                'message': str(e)
+            }
+            self.send_response(data=insert_fail_json, http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+            self.finish()
+            return
+
 def make_app(app_base_path='/', api_base_path='api', debug=False):
     ## Configure app base path
     app_base_path = f'''/{app_base_path.strip('/')}'''
@@ -958,7 +1047,9 @@ def make_app(app_base_path='/', api_base_path='api', debug=False):
             (r"{}/{}/uws/report/end/(.*)".format(app_base_path, api_base_path), JobReportCompleteHandler),
             (r"{}/{}/job/submit".format(app_base_path, api_base_path), CLEANSubmitJobHandler),
             (r"{}/{}/job/status".format(app_base_path, api_base_path), CLEANStatusJobHandler),
-            (r"{}/{}/job/result".format(app_base_path, api_base_path), CLEANResultJobHandler)
+            (r"{}/{}/job/result".format(app_base_path, api_base_path), CLEANResultJobHandler),
+            (r"{}/{}/mailing/add".format(app_base_path, api_base_path), CLEANAddMailingListHandler),
+            (r"{}/{}/mailing/delete".format(app_base_path, api_base_path), CLEANRemoveMailingListHandler),
         ],
         **settings
     )
