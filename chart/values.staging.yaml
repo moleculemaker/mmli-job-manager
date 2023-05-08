@@ -77,7 +77,7 @@ extraDeploy:
             passwordKey: mariadb-password
             existingSecret: job-manager-mariadb
     global: |
-      enabled: true
+      enabled: false
       backup-nfs-path: /taiga/ncsa/radiant/bbfp/mmli1/backups/staging/jobmgr
       backup-nfs-server: taiga-nfs.ncsa.illinois.edu
 
