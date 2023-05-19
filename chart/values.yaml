@@ -9,7 +9,7 @@ controller:
 
 persistence:
   # Set this to use a particular StorageClass
-  # Unset this to use a cluster default StorageClass
+  # Unset this to use the cluster default StorageClass
   storageClassName: ""
   existingClaim: ""
   storageSize: "10Gi"
