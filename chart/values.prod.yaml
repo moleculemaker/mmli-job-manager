@@ -5,8 +5,10 @@ ingress:
     cert-manager.io/cluster-issuer: letsencrypt-production
     kubernetes.io/tls-acme: "true"
     traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: oauth2-proxy-cors-header@kubernetescrd
 
 persistence:
+  existingClaim: "mmli-clean-job-weights"
   storageClassName: csi-cinder-sc-retain
   storageSize: "100Gi"
 

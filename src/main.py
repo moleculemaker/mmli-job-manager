@@ -1,3 +1,5 @@
+import base64
+import logging
 import os
 import global_vars
 from global_vars import STATUS_OK, config, log
@@ -17,6 +19,8 @@ from jobutils import valid_job_id, construct_job_object
 import email_utils
 import requests
 from requests.exceptions import Timeout
+
+import userinfo
 
 # Get global instance of the job handler database interface
 db = DbConnector(
@@ -219,19 +223,24 @@ class JobReportCompleteHandler(BaseHandler):
 
 class JobHandler(BaseHandler):
     def put(self):
+        user = None
+        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
+            cookie_name = config['oauth']['cookieName']
+            user = userinfo.validate_auth_cookie(self.request)
+            log.debug('User: ' + str(user))
+
+        if user is None:
+            log.error('401 Unauthorized')
+            self.send_response('401: Unauthorized', http_status_code=401, return_json=False)
+            self.finish()
+            return
+
         try:
             echo = self.getarg('echo') # required
 
             job_config = {
                 'echo': echo,
             }
-
-            ## Command that the job container will execute. The `$JOB_OUTPUT_DIR` environment variable is
-            ## populated at run time after a job ID and output directory have been provisioned.
-            command = f'''echo {echo} | tee $JOB_OUTPUT_DIR/job.log'''
-            log.debug(f"Job command: {command}")
-
-            ## Options:
 
             ## environment is a list of environment variable names and values like [{'name': 'env1', 'value': 'val1'}]
             environment = self.getarg('environment', default=[]) # optional
@@ -261,6 +270,15 @@ class JobHandler(BaseHandler):
                 str(e), http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
             self.finish()
             return
+
+        ## Command that the job container will execute. The `$JOB_OUTPUT_DIR` environment variable is
+        ## populated at run time after a job ID and output directory have been provisioned.
+        encoded_data = base64.b64encode(job_config.encode('utf-8')).decode('utf-8')
+        mount_path = '/app/data/inputs'
+        command = f'''echo {encoded_data} | base64 -d > {mount_path}/{run_id}.fasta && ((python CLEAN_infer_fasta.py --fasta_data {run_id} >> {job_output_dir}/log) || (touch {job_output_dir}/error && false))'''
+        log.debug(f"Job command: {command}")
+
+        ## Options:
 
         response = kubejob.create_job(
             command=command,
@@ -350,6 +368,18 @@ class JobHandler(BaseHandler):
             return
 
     def get(self, job_id=None, property=None):
+        user = None
+        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
+            cookie_name = config['oauth']['cookieName']
+            user = userinfo.validate_auth_cookie(self.request)
+            log.debug('User: ' + str(user))
+
+        if user is None:
+            log.error('401 Unauthorized')
+            self.send_response('401: Unauthorized', http_status_code=401, return_json=False)
+            self.finish()
+            return
+
         # See https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#resourceuri
         ## The valid properties are the keys of the returned job data structure
         valid_properties = {
@@ -417,6 +447,18 @@ class JobHandler(BaseHandler):
             return
 
     def delete(self, job_id=None):
+        user = None
+        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
+            cookie_name = config['oauth']['cookieName']
+            user = userinfo.validate_auth_cookie(self.request)
+            log.debug('User: ' + str(user))
+
+        if user is None:
+            log.error('401 Unauthorized')
+            self.send_response('401: Unauthorized', http_status_code=401, return_json=False)
+            self.finish()
+            return
+
         try:
             assert valid_job_id(job_id)
         except Exception as e:
@@ -497,7 +539,7 @@ class CLEANSubmitJobHandler(BaseHandler):
             'message': message
         }
         return responseBody
-    
+
     def verify_captcha(self, captcha_token):
         hcaptcha_secret = config['hcaptcha']['secret']
         try:
@@ -559,166 +601,226 @@ class CLEANSubmitJobHandler(BaseHandler):
         return amino_acid_seq
         
     def post(self):
-        try:
-            data = json.loads(self.request.body)
-            user_email = 'dummy@example.com'
-            job_config = ""
-            
-            if len(data) == 0:
-                raise Exception('JSON body is empty.')
-            if 'user_email' in data:
-                user_email = data['user_email']
-            if 'captcha_token' in data:
-                if not self.verify_captcha(data['captcha_token']):
-                    raise Exception('Captcha is invalid.')
-            else:
-                raise Exception('Captcha is missing.')
-            
-            sequence_count = 0
-            # Convert JSON to FASTA format
-            for record in data['input_fasta']:
-                # Check for valid amino acid characters
-                if re.match('^[ACDEFGHIKLMNPQRSTVWY]+$', record["sequence"]):
-                    job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
-                elif re.match('^[ACGTURYSWKMBDHVN]*$', record["DNA_sequence"]):
-                    protein_sequence = self.getProteinSeqFromDNA(record["DNA_sequence"])
-                    if protein_sequence == '':
-                        raise Exception('Invalid DNA Sequence')
-                    else:
-                        job_config += ">{}\n{}\n".format(record["header"], protein_sequence)
-                else: 
-                    raise Exception('Invalid FASTA Protein Sequence')
+        user = None
+        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
+            cookie_name = config['oauth']['cookieName']
+            user = userinfo.validate_auth_cookie(self.request)
+            log.debug('User: ' + str(user))
 
-                sequence_count += 1
+        # Parse JSON request body
+        data = json.loads(self.request.body)
 
-            if sequence_count > 20:
-                raise Exception('CLEAN allows only for a maximum of 20 FASTA Sequences.')
-
-            ## Command that the job container will execute. The `$JOB_OUTPUT_DIR` environment variable is
-            ## populated at run time after a job ID and output directory have been provisioned.
-            command = f'''cat /tmp/input.fasta'''
-
-            ## environment is a list of environment variable names and values like [{'name': 'env1', 'value': 'val1'}]
-            environment = self.getarg('environment', default=[]) # optional
-
-            ## Number of parallel job containers to run. The containers will execute identical code. Coordination is the
-            ## responsibility of the job owner.
-            ## replicas = self.getarg('replicas', default=1) # optional
-            replicas = 1
-
-            ## Valid run_id value follows the Kubernetes label value constraints:
-            ##   - must be 63 characters or less (cannot be empty),
-            ##   - must begin and end with an alphanumeric character ([a-z0-9A-Z]),
-            ##   - could contain dashes (-), underscores (_), dots (.), and alphanumerics between.
-            ## See also:
-            ##   - https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#runId
-            ##   - https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
-            run_id = self.getarg('run_id', default='') # optional
-            if run_id and (not isinstance(run_id, str) or run_id != re.sub(r'[^-._a-zA-Z0-9]', "", run_id) or not re.match(r'[a-zA-Z0-9]', run_id)):
-                raise Exception('Invalid run_id. Must be 63 characters or less and begin with alphanumeric character and contain only dashes (-), underscores (_), dots (.), and alphanumerics between.')
-            user_id = 'DummyID'
-        except Exception as e:
-            self.send_response(
-                self.failed_job_response(str(e)), http_status_code=global_vars.HTTP_BAD_REQUEST, return_json=False)
+        if len(data) == 0:
+            # Invalid DNA Sequence, return 400
+            self.send_response(data='400: Bad Request - JSON body expected',
+                               http_status_code=400,
+                               return_json=False)
             self.finish()
             return
 
+        if user:
+            user_email = user['email']
+        elif 'captcha_token' in data:
+            log.warning('401 Unauthorized - falling back to captcha')
+            user_email = data['user_email'] if 'user_email' in data else ''
+            # Fallback attempt to hcaptcha without _oauth2_proxy cookie
+            if self.verify_captcha(data['captcha_token']):
+                pass
+            else:
+                # No auth token, no captcha => no access
+                self.send_response(data='401: Unauthorized',
+                                   http_status_code=401,
+                                   return_json=False)
+                self.finish()
+                return
+        else:
+            # No auth token, no captcha => no access
+            self.send_response(data='401: Unauthorized',
+                               http_status_code=401,
+                               return_json=False)
+            self.finish()
+            return
+
+        job_config = ""
+
+        sequence_count = 0
+        # Convert JSON to FASTA format
+        for record in data['input_fasta']:
+            # Check for valid amino acid characters
+            if re.match('^[ACDEFGHIKLMNPQRSTVWY]+$', record["sequence"]):
+                job_config += ">{}\n{}\n".format(record["header"], record["sequence"])
+            elif re.match('^[ACGTURYSWKMBDHVN]*$', record["DNA_sequence"]):
+                protein_sequence = self.getProteinSeqFromDNA(record["DNA_sequence"])
+                if protein_sequence == '':
+                    # Invalid DNA Sequence, return 400
+                    self.send_response(data='400: Bad Request - Invalid DNA Sequence',
+                                       http_status_code=400,
+                                       return_json=False)
+                    self.finish()
+                    return
+                else:
+                    job_config += ">{}\n{}\n".format(record["header"], protein_sequence)
+            else:
+                # Invalid FASTA Sequence, return 400
+                self.send_response(data='400: Bad Request - Invalid FASTA Protein Sequence',
+                                   http_status_code=400,
+                                   return_json=False)
+                self.finish()
+                return
+
+            sequence_count += 1
+
+        if sequence_count > 20:
+            # Invalid FASTA Sequence, return 400
+            self.send_response(data='400: Bad Request - CLEAN allows only for a maximum of 20 FASTA Sequences.',
+                               http_status_code=400,
+                               return_json=False)
+            self.finish()
+            return
+
+        ## environment is a list of environment variable names and values like [{'name': 'env1', 'value': 'val1'}]
+        environment = self.getarg('environment', default=[]) # optional
+
+        ## Number of parallel job containers to run. The containers will execute identical code. Coordination is the
+        ## responsibility of the job owner.
+        ## replicas = self.getarg('replicas', default=1) # optional
+        replicas = 1
+
+        ## Valid run_id value follows the Kubernetes label value constraints:
+        ##   - must be 63 characters or less (cannot be empty),
+        ##   - must begin and end with an alphanumeric character ([a-z0-9A-Z]),
+        ##   - could contain dashes (-), underscores (_), dots (.), and alphanumerics between.
+        ## See also:
+        ##   - https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#runId
+        ##   - https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+        run_id = self.getarg('run_id', default='') # optional
+        if run_id and (not isinstance(run_id, str) or run_id != re.sub(r'[^-._a-zA-Z0-9]', "", run_id) or not re.match(r'[a-zA-Z0-9]', run_id)):
+            # Invalid FASTA Sequence, return 400
+            self.send_response(data='400: Bad Request - Invalid run_id. Must be 63 characters or less and begin with alphanumeric character and contain only dashes (-), underscores (_), dots (.), and alphanumerics between.',
+                               http_status_code=400,
+                               return_json=False)
+            self.finish()
+            return
+
+        user_id = 'DummyID'
+
+        # Build up path to output dir
+        # FIXME: feature envy?
+        job_id = kubejob.generate_uuid()
+        if not run_id:
+            run_id = job_id
+        job_root_dir = kubejob.get_job_root_dir_from_id(job_id)
+        job_output_dir = os.path.join(job_root_dir, 'out')
+
+        ## Command that the job container will execute. The `$JOB_OUTPUT_DIR` environment variable is
+        ## populated at run time after a job ID and output directory have been provisioned.
+        encoded_data = base64.b64encode(job_config.encode('utf-8')).decode('utf-8')
+        mount_path = '/app/data/inputs'
+        command = f'''echo {encoded_data} | base64 -d > {mount_path}/{run_id}.fasta && ((python CLEAN_infer_fasta.py --fasta_data {run_id} >> {job_output_dir}/log) || (touch {job_output_dir}/error && false))'''
+
         response = kubejob.create_job(
             command=command,
+            job_id=job_id,
             run_id=run_id,
             owner_id=user_id,
             replicas=replicas,
-            environment=environment,
-            job_config=job_config,
+            environment=environment
         )
         log.debug(response)
         if response['status'] != global_vars.STATUS_OK:
             self.send_response(response['message'], http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
             self.finish()
             return
-        try:
-            timeout = 30
-            while timeout > 0:
-                results = kubejob.list_jobs(
-                    job_id=response['job_id'],
-                )
-                if results['jobs']:
-                    job = construct_job_object(results['jobs'][0])
-                    try:
-                        user_agent = self.request.headers["User-Agent"]
-                    except:
-                        user_agent = ''
-                    queue_position = 0
-                    try:
-                        ## TODO: Replace with specialized query that uses the SQL count() command
-                        job_list = []
-                        for phase in ['pending', 'queued', 'executing']:
-                            job_list.extend(db.select_job_records(phase=phase, fields=['id']))
-                        log.debug(job_list)
-                        queue_position = len(job_list)
-                    except Exception as e:
-                        log.error(f'''Error querying job queue position: {e}''')
-                    try:
-                        command = job['parameters']['command']
-                        if isinstance(command, list):
-                            command = ' '.join(command)
-                        ## TODO: Replace the JSON dump of the full job info with proper table records.
-                        job_info = {
-                            'job_id': job['jobId'],
-                            'run_id': job['runId'],
-                            'user_id': job['ownerId'],
-                            'command': command,
-                            'type': 'cutout',
-                            'phase': job['phase'],
-                            'time_created': job['creationTime'] or 0,
-                            'time_start': job['startTime'] or 0,
-                            'time_end': job['endTime'] or 0,
-                            'user_agent': user_agent,
-                            'email': user_email,
-                            'job_info': json.dumps(job, default = self.json_converter),
-                            'queue_position': queue_position,
-                            }
-                        db.insert_job_record(job_info)
-                        ##
-                        ## TODO: This is a hack for testing locally, because the monitor sidecar container
-                        ##       would be calling back to the API server with a job start and end report.
-                        ##
-                        if not config['uws']['job']['monitorEnabled']:
-                            log.debug(f'''Updating started job "{job_info['job_id']}"...''')
-                            db.update_job(
-                                job_id=job_info['job_id'],
-                                phase='executing',
-                                start_time=datetime.utcnow(),
-                            )
-                    except Exception as e:
-                        err_msg = f'''Error recording job in database: {e}'''
-                        log.error(err_msg)
-                        self.send_response(err_msg, http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
-                        self.finish()
-                        return
-                    responseBody = {
-                        'jobId': job['jobId'],
-                        'url' : APPCONFIG['baseUrl'] + '/jobId/' + job['jobId'],
-                        'status' : 'executing',
-                        'created_at': job['creationTime'] or 0
-                    }
-                    self.send_response(responseBody, indent=2)
+        timeout = 30
+        while timeout > 0:
+            results = kubejob.list_jobs(
+                job_id=response['job_id'],
+            )
+            if results['jobs']:
+                job = construct_job_object(results['jobs'][0])
+                try:
+                    user_agent = self.request.headers["User-Agent"]
+                except:
+                    user_agent = ''
+                queue_position = 0
+                try:
+                    ## TODO: Replace with specialized query that uses the SQL count() command
+                    job_list = []
+                    for phase in ['pending', 'queued', 'executing']:
+                        job_list.extend(db.select_job_records(phase=phase, fields=['id']))
+                    log.debug(job_list)
+                    queue_position = len(job_list)
+                except Exception as e:
+                    log.error(f'''Error querying job queue position: {e}''')
+                try:
+                    command = job['parameters']['command']
+                    if isinstance(command, list):
+                        command = ' '.join(command)
+                    ## TODO: Replace the JSON dump of the full job info with proper table records.
+                    job_info = {
+                        'job_id': job['jobId'],
+                        'run_id': job['runId'],
+                        'user_id': job['ownerId'],
+                        'command': command,
+                        'type': 'cutout',
+                        'phase': job['phase'],
+                        'time_created': job['creationTime'] or 0,
+                        'time_start': job['startTime'] or 0,
+                        'time_end': job['endTime'] or 0,
+                        'user_agent': user_agent,
+                        'email': user_email,
+                        'job_info': json.dumps(job, default = self.json_converter),
+                        'queue_position': queue_position,
+                        }
+                    db.insert_job_record(job_info)
+                    ##
+                    ## TODO: This is a hack for testing locally, because the monitor sidecar container
+                    ##       would be calling back to the API server with a job start and end report.
+                    ##
+                    if not config['uws']['job']['monitorEnabled']:
+                        log.debug(f'''Updating started job "{job_info['job_id']}"...''')
+                        db.update_job(
+                            job_id=job_info['job_id'],
+                            phase='executing',
+                            start_time=datetime.utcnow(),
+                        )
+                except Exception as e:
+                    err_msg = f'''Error recording job in database: {e}'''
+                    log.error(err_msg)
+                    self.send_response(err_msg, http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
                     self.finish()
                     return
-                else:
-                    timeout -= 1
-                    time.sleep(0.300)
-            self.send_response("Job creation timed out.", http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
-            self.finish()
-            return
-        except Exception as e:
-            self.send_response(str(e), http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
-            self.finish()
-            return
+                responseBody = {
+                    'jobId': job['jobId'],
+                    'url' : APPCONFIG['baseUrl'] + '/jobId/' + job['jobId'],
+                    'status' : 'executing',
+                    'created_at': job['creationTime'] or 0
+                }
+                self.send_response(responseBody, indent=2)
+                self.finish()
+                return
+            else:
+                timeout -= 1
+                time.sleep(0.300)
+        self.send_response("Job creation timed out.", http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+        self.finish()
+        return
         
 
 class CLEANStatusJobHandler(BaseHandler):
     def post(self):
+        user = None
+        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
+            cookie_name = config['oauth']['cookieName']
+            user = userinfo.validate_auth_cookie(self.request)
+            log.debug('User: ' + str(user))
+
+        if user is None:
+            log.error('401 Unauthorized')
+            self.send_response('401: Unauthorized', http_status_code=401, return_json=False)
+            self.finish()
+            return
+
         job_id = self.getarg('jobId', default='')
 
         # See https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#resourceuri
@@ -800,7 +902,20 @@ class CLEANStatusJobHandler(BaseHandler):
 
 
 class CLEANResultJobHandler(BaseHandler):
+
      def post(self):
+        user = None
+        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
+            cookie_name = config['oauth']['cookieName']
+            user = userinfo.validate_auth_cookie(self.request)
+            log.debug('User: ' + str(user))
+
+        if user is None:
+            log.error('401 Unauthorized')
+            self.send_response('401: Unauthorized', http_status_code=401, return_json=False)
+            self.finish()
+            return
+
         job_id = self.getarg('jobId', default='')
 
         # See https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#resourceuri
