@@ -163,7 +163,7 @@ def delete_job(job_id: str) -> None:
     #     raise
 
 
-def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None, job_config=""):
+def create_job(command, job_id=None, run_id=None, owner_id=None, replicas=1, environment=None):
     response = {
         'job_id': None,
         'message': None,
@@ -171,7 +171,8 @@ def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None
     }
     try:
         namespace = get_namespace()
-        job_id = generate_uuid()
+        if not job_id:
+            job_id = generate_uuid()
         if not run_id:
             run_id = job_id
         job_name = get_job_name_from_id(job_id)
@@ -215,9 +216,6 @@ def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None
             templateText = f.read()
         template = Template(templateText)
 
-        encoded_data = base64.b64encode(job_config.encode('utf-8')).decode('utf-8')
-        mount_path = '/app/data/inputs'
-
         job_body = yaml.safe_load(template.render(
             name=job_name,
             runId=run_id,
@@ -247,7 +245,7 @@ def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None
                 # Runs the CLEAN command on the input file and stores the output to log file at /uws/jobs/<jobId>/out/log
                 # In case the CLEAN command has an exception, an error file is created at  /uws/jobs/<jobId>/out/error for which the monitor looks for
                 # In an error condition, we still want the entire command to be False so that the "finished" file is not created (it is created as {command} && touch finished), therefore, error condition is ANDed with False
-            command=f'''echo {encoded_data} | base64 -d > {mount_path}/{job_id}.fasta && ((python CLEAN_infer_fasta.py --fasta_data {job_id} >> {job_output_dir}/log) || (touch {job_output_dir}/error && false))''',
+            command=command,
 
             environment=environment,
             uws_root_dir=config['uws']['workingVolume']['mountPath'],
@@ -261,6 +259,7 @@ def create_job(command, run_id=None, owner_id=None, replicas=1, environment=None
             apiToken='dummy',
             jobCompleteApiUrl=jobCompleteApiUrl,
             # releaseName=os.environ.get('RELEASE_NAME', 'dummy'),
+            ttlSecondsAfterFinished=config['uws']['job']['ttlSecondsAfterFinished'],
             activeDeadlineSeconds=config['uws']['job']['activeDeadlineSeconds'],
             monitorEnabled=config['uws']['job']['monitorEnabled'],
         ))

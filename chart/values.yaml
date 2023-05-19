@@ -1,16 +1,25 @@
 ingress:
-  hostname: jobmgr.localhost
+  hostname: jobmgr.proxy.localhost
   tls: false
   annotations: {}
 
 controller:
   image: moleculemaker/mmli-job-manager:main
 
+
 persistence:
   # Set this to use a particular StorageClass
-  # Unset this to use a clsuter default StorageClass
-  storageClassName: "job-manager-storage-class"
+  # Unset this to use a cluster default StorageClass
+  storageClassName: ""
+  existingClaim: ""
   storageSize: "10Gi"
+
+  # EXPERIMENTAL: Set this to enable mounting a directory into this volume from host
+  hostpath: ""
+
+hcaptcha:
+  auth:
+    existingSecret: ""
 
 # https://artifacthub.io/packages/helm/bitnami/mariadb?modal=values
 mariadb:
@@ -28,3 +37,6 @@ mariadb:
 
     # Set the name of your mariadb database
     database: "mmli"
+
+# Override server.yaml at runtime
+config: {}

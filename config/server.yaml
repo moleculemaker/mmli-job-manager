@@ -16,7 +16,10 @@ db:
   pass: ""
   database: ""
 hcaptcha:
-  secret: ""
+  secret: "ChangeThisInProduction"
+oauth:
+  userInfoUrl: "http://oauth2-proxy.oauth2-proxy.svc.cluster.local/oauth2/userinfo"
+  cookieName: "_oauth2_proxy"
 email:
   server: "smtp.ncsa.uiuc.edu"
   fromEmail: "devnull+clean@ncsa.illinois.edu"
@@ -38,6 +41,8 @@ uws:
       pullSecrets: []
     ## Abort jobs after 3 days regardless of their behavior
     activeDeadlineSeconds: 259200
+    ## Cleanup completed/failed jobs after 12 hours
+    ttlSecondsAfterFinished: 43200
     ## Poll the log file for changes every `logFilePollingPeriod` seconds
     logFilePollingPeriod: 300
     ## CAUTION: Discrepancy between the UID of the image user and the mmli API server UID

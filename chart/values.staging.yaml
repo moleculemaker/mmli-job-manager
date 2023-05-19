@@ -5,6 +5,7 @@ ingress:
     cert-manager.io/cluster-issuer: letsencrypt-production
     kubernetes.io/tls-acme: "true"
     traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: staging-cors-header@kubernetescrd
 
 controller:
   image: moleculemaker/mmli-job-manager:staging
@@ -25,6 +26,35 @@ mariadb:
 hcaptcha:
   auth:
     existingSecret: "hcaptcha"
+
+extraDeploy:
+- apiVersion: traefik.containo.us/v1alpha1
+  kind: Middleware
+  metadata:
+    name: cors-header
+    namespace: staging
+  spec:
+    headers:
+      accessControlAllowCredentials: true
+      accessControlAllowHeaders:
+      - Origin
+      - X-Requested-With
+      - Content-Type
+      - content-type
+      - Accept
+      - Authorization
+      accessControlAllowMethods:
+      - GET
+      - OPTIONS
+      - PUT
+      - DELETE
+      - POST
+      accessControlAllowOriginList:
+      - https://clean.frontend.mmli1.ncsa.illinois.edu
+      - https://clean.frontend.staging.mmli1.ncsa.illinois.edu
+      - https://jobmgr.mmli1.ncsa.illinois.edu
+      - https://jobmgr.staging.mmli1.ncsa.illinois.edu
+
 
 config:
   server:
