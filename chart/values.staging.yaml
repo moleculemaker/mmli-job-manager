@@ -67,7 +67,7 @@ extraDeploy:
       app.kubernetes.io/component: config
   data:
     backups: |
-      - backup-name: decentci-backups-jobmgr-db
+      - backup-name: decentci-backups-jobmgr-db-staging
         schedule: "01 7 * * *"
         database:
           type: mysql
