@@ -223,17 +223,37 @@ class JobReportCompleteHandler(BaseHandler):
 
 class JobHandler(BaseHandler):
     def put(self):
+        # Parse JSON request body
+        data = json.loads(self.request.body)
+
         user = None
         if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
-            cookie_name = config['oauth']['cookieName']
             user = userinfo.validate_auth_cookie(self.request)
             log.debug('User: ' + str(user))
 
-        if user is None:
-            log.error('401 Unauthorized')
-            self.send_response('401: Unauthorized', http_status_code=401, return_json=False)
+        if user:
+            user_email = user['email']
+        elif 'captcha_token' in data:
+            log.warning('401 Unauthorized - falling back to captcha')
+            user_email = data['user_email'] if 'user_email' in data else ''
+            # Fallback attempt to hcaptcha without _oauth2_proxy cookie
+            if self.verify_captcha(data['captcha_token']):
+                pass
+            else:
+                # No auth token, no captcha => no access
+                self.send_response(data='401: Unauthorized',
+                                   http_status_code=401,
+                                   return_json=False)
+                self.finish()
+                return
+        else:
+            # No auth token, no captcha => no access
+            self.send_response(data='401: Unauthorized',
+                               http_status_code=401,
+                               return_json=False)
             self.finish()
             return
+
 
         try:
             echo = self.getarg('echo') # required
@@ -368,18 +388,6 @@ class JobHandler(BaseHandler):
             return
 
     def get(self, job_id=None, property=None):
-        user = None
-        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
-            cookie_name = config['oauth']['cookieName']
-            user = userinfo.validate_auth_cookie(self.request)
-            log.debug('User: ' + str(user))
-
-        if user is None:
-            log.error('401 Unauthorized')
-            self.send_response('401: Unauthorized', http_status_code=401, return_json=False)
-            self.finish()
-            return
-
         # See https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#resourceuri
         ## The valid properties are the keys of the returned job data structure
         valid_properties = {
@@ -387,10 +395,19 @@ class JobHandler(BaseHandler):
             'user_id': 'results',
             'command': 'command',
             'run_id': 'run_id',
-            'email': 'email',
             'type': 'type',
             'job_info': 'job_info',
         }
+
+        # Check for user, only list email if user logged in
+        user = None
+        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
+            user = userinfo.validate_auth_cookie(self.request)
+            log.debug('User: ' + str(user))
+
+        if user is not None:
+            valid_properties['email'] = 'email'
+
         response = {}
         # If no job_id is included in the request URL, return a list of jobs. See:
         # UWS Schema: https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#UWSSchema
@@ -447,9 +464,9 @@ class JobHandler(BaseHandler):
             return
 
     def delete(self, job_id=None):
+        # Only allow destructive operation for logged-in user
         user = None
         if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
-            cookie_name = config['oauth']['cookieName']
             user = userinfo.validate_auth_cookie(self.request)
             log.debug('User: ' + str(user))
 
@@ -603,7 +620,6 @@ class CLEANSubmitJobHandler(BaseHandler):
     def post(self):
         user = None
         if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
-            cookie_name = config['oauth']['cookieName']
             user = userinfo.validate_auth_cookie(self.request)
             log.debug('User: ' + str(user))
 
@@ -809,18 +825,6 @@ class CLEANSubmitJobHandler(BaseHandler):
 
 class CLEANStatusJobHandler(BaseHandler):
     def post(self):
-        user = None
-        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
-            cookie_name = config['oauth']['cookieName']
-            user = userinfo.validate_auth_cookie(self.request)
-            log.debug('User: ' + str(user))
-
-        if user is None:
-            log.error('401 Unauthorized')
-            self.send_response('401: Unauthorized', http_status_code=401, return_json=False)
-            self.finish()
-            return
-
         job_id = self.getarg('jobId', default='')
 
         # See https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#resourceuri
@@ -830,10 +834,19 @@ class CLEANStatusJobHandler(BaseHandler):
             'user_id': 'results',
             'command': 'command',
             'run_id': 'run_id',
-            'email': 'email',
             'type': 'type',
             'job_info': 'job_info',
         }
+
+        # Check for user, only list email if user logged in
+        user = None
+        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
+            user = userinfo.validate_auth_cookie(self.request)
+            log.debug('User: ' + str(user))
+
+        if user is not None:
+            valid_properties['email'] = 'email'
+
         fields = ['job_id', 'phase', 'time_created']
         response = {}
         # If no job_id is included in the request URL, return a list of jobs. See:
@@ -904,18 +917,6 @@ class CLEANStatusJobHandler(BaseHandler):
 class CLEANResultJobHandler(BaseHandler):
 
      def post(self):
-        user = None
-        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
-            cookie_name = config['oauth']['cookieName']
-            user = userinfo.validate_auth_cookie(self.request)
-            log.debug('User: ' + str(user))
-
-        if user is None:
-            log.error('401 Unauthorized')
-            self.send_response('401: Unauthorized', http_status_code=401, return_json=False)
-            self.finish()
-            return
-
         job_id = self.getarg('jobId', default='')
 
         # See https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#resourceuri
@@ -925,10 +926,19 @@ class CLEANResultJobHandler(BaseHandler):
             'user_id': 'results',
             'command': 'command',
             'run_id': 'run_id',
-            'email': 'email',
             'type': 'type',
             'job_info': 'job_info',
         }
+
+        # Check for user, only list email if user logged in
+        user = None
+        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
+            user = userinfo.validate_auth_cookie(self.request)
+            log.debug('User: ' + str(user))
+
+        if user is not None:
+            valid_properties['email'] = 'email'
+
         fields = ['job_id', 'phase', 'time_created']
         response = {}
         # If no job_id is included in the request URL, return a list of jobs. See:
