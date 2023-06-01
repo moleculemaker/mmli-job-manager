@@ -299,14 +299,13 @@ class JobHandler(BaseHandler):
         log.debug(f"Job command: {command}")
 
         ## Options:
-
         response = kubejob.create_job(
+            image_repo='moleculemaker/clean-image-amd64',
             command=command,
             run_id=run_id,
             owner_id=user_id,
             replicas=replicas,
             environment=environment,
-            job_config=job_config,
         )
         log.debug(response)
         if response['status'] != global_vars.STATUS_OK:
@@ -345,7 +344,7 @@ class JobHandler(BaseHandler):
                             'run_id': job['runId'],
                             'user_id': job['ownerId'],
                             'command': command,
-                            'type': 'cutout',
+                            'type': 'clean',
                             'phase': job['phase'],
                             'time_created': job['creationTime'] or 0,
                             'time_start': job['startTime'] or 0,
@@ -735,6 +734,7 @@ class CLEANSubmitJobHandler(BaseHandler):
         command = f'''echo {encoded_data} | base64 -d > {mount_path}/{run_id}.fasta && ((python CLEAN_infer_fasta.py --fasta_data {run_id} >> {job_output_dir}/log) || (touch {job_output_dir}/error && false))'''
 
         response = kubejob.create_job(
+            image_repo='moleculemaker/clean-image-amd64',
             command=command,
             job_id=job_id,
             run_id=run_id,
@@ -778,7 +778,7 @@ class CLEANSubmitJobHandler(BaseHandler):
                         'run_id': job['runId'],
                         'user_id': job['ownerId'],
                         'command': command,
-                        'type': 'cutout',
+                        'type': 'clean',
                         'phase': job['phase'],
                         'time_created': job['creationTime'] or 0,
                         'time_start': job['startTime'] or 0,

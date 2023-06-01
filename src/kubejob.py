@@ -163,7 +163,7 @@ def delete_job(job_id: str) -> None:
     #     raise
 
 
-def create_job(command, job_id=None, run_id=None, owner_id=None, replicas=1, environment=None):
+def create_job(image_repo, command, job_id=None, run_id=None, owner_id=None, replicas=1, environment=None):
     response = {
         'job_id': None,
         'message': None,
@@ -229,7 +229,7 @@ def create_job(command, job_id=None, run_id=None, owner_id=None, replicas=1, env
             ##          the server UID is 1000, then files created by the job will not in general
             ##          allow the server to delete them when cleaning up deleted jobs.
             image={
-                'repository': config['uws']['job']['image']['repository'],
+                'repository': image_repo,
                 'tag': image_tag,
                 'pull_policy': pullPolicy,
             },
