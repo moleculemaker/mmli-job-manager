@@ -192,8 +192,7 @@ class DbConnector:
                 WHERE {criteria}
                 ORDER BY `time_created` DESC
             '''
-            log.debug(f'sql: {sql}')
-            log.debug(f'vals: {vals}')
+            #log.debug(f'Selecting: {sql % vals}')
             job_info_list = []
             self.cur.execute(sql, vals)
             col_names = [desc[0] for desc in self.cur.description]
@@ -235,6 +234,7 @@ class DbConnector:
             if phase:
                 setSqlTexts.append('`phase`=%s')
                 vals += (phase,)
+                log.debug(f'Updating database: {job_id} -> {phase}')
             if start_time:
                 setSqlTexts.append('`time_start`=%s')
                 vals += (start_time,)
@@ -251,9 +251,8 @@ class DbConnector:
                 vals += (email,)
             setSqlText = ', '.join(setSqlTexts)
             sql = f'''UPDATE `job` SET {setSqlText} WHERE `job_id`=%s'''
-            log.debug(sql)
-            log.debug(vals)
             vals += (job_id,)
+            log.debug(f'Updating: {sql % vals}')
             self.cur.execute((sql), vals)
             self.close_db_connection()
         except Exception as e:

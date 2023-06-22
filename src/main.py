@@ -1,8 +1,7 @@
 import base64
-import logging
 import os
 import global_vars
-from global_vars import STATUS_OK, config, log
+from global_vars import config, log
 import tornado.ioloop
 import tornado.web
 import tornado.template
@@ -21,6 +20,7 @@ import requests
 from requests.exceptions import Timeout
 
 import userinfo
+import kubewatcher
 
 # Get global instance of the job handler database interface
 db = DbConnector(
@@ -32,7 +32,7 @@ db = DbConnector(
 
 APPCONFIG = {
     # 'auth_token': os.environ['SPT_API_TOKEN'],
-    'baseUrl': 'https://clean.frontend.mmli1.ncsa.illinois.edu',
+    'baseUrl': '/',
 }
 utc_timezone = pytz.timezone('UTC')
 
@@ -229,7 +229,7 @@ class JobHandler(BaseHandler):
         user = None
         if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
             user = userinfo.validate_auth_cookie(self.request)
-            log.debug('User: ' + str(user))
+            #log.debug('User: ' + str(user))
 
         if user:
             user_email = user['email']
@@ -237,7 +237,7 @@ class JobHandler(BaseHandler):
             log.warning('401 Unauthorized - falling back to captcha')
             user_email = data['user_email'] if 'user_email' in data else ''
             # Fallback attempt to hcaptcha without _oauth2_proxy cookie
-            if self.verify_captcha(data['captcha_token']):
+            if userinfo.verify_captcha(data['captcha_token']):
                 pass
             else:
                 # No auth token, no captcha => no access
@@ -300,7 +300,7 @@ class JobHandler(BaseHandler):
 
         ## Options:
         response = kubejob.create_job(
-            image_repo='moleculemaker/clean-image-amd64',
+            image_name='moleculemaker/clean-image-amd64',
             command=command,
             run_id=run_id,
             owner_id=user_id,
@@ -402,7 +402,7 @@ class JobHandler(BaseHandler):
         user = None
         if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
             user = userinfo.validate_auth_cookie(self.request)
-            log.debug('User: ' + str(user))
+            #log.debug('User: ' + str(user))
 
         if user is not None:
             valid_properties['email'] = 'email'
@@ -467,7 +467,7 @@ class JobHandler(BaseHandler):
         user = None
         if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
             user = userinfo.validate_auth_cookie(self.request)
-            log.debug('User: ' + str(user))
+            #log.debug('User: ' + str(user))
 
         if user is None:
             log.error('401 Unauthorized')
@@ -545,41 +545,397 @@ class ResultFileHandler(BaseHandler):
             self.finish()
             return
 
+class MOLLIJobHandler(BaseHandler):
+    def post(self):
+        user = None
+        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth'][
+            'cookieName'] in self.request.cookies:
+            user = userinfo.validate_auth_cookie(self.request)
+            #log.debug('User: ' + str(user))
+
+        # Parse JSON request body
+        try:
+            data = json.loads(self.request.body)
+        except:
+            # Invalid DNA Sequence, return 400
+            self.send_response(data='400: Bad Request - JSON body expected',
+                               http_status_code=400,
+                               return_json=False)
+            self.finish()
+            return
+
+
+        if len(data) == 0:
+            # Invalid DNA Sequence, return 400
+            self.send_response(data='400: Bad Request - JSON body expected',
+                               http_status_code=400,
+                               return_json=False)
+            self.finish()
+            return
+
+        user_email = ''
+        if user:
+            user_email = user['email']
+        # elif 'captcha_token' in data:
+        #     log.warning('401 Unauthorized - falling back to captcha')
+        #     user_email = data['user_email'] if 'user_email' in data else ''
+        #     # Fallback attempt to hcaptcha without _oauth2_proxy cookie
+        #     if userinfo.verify_captcha(data['captcha_token']):
+        #         pass
+        #     else:
+        #         # No auth token, no captcha => no access
+        #         self.send_response(data='401: Unauthorized',
+        #                            http_status_code=401,
+        #                            return_json=False)
+        #         self.finish()
+        #         return
+        # else:
+        #     # No auth token, no captcha => no access
+        #     self.send_response(data='401: Unauthorized',
+        #                        http_status_code=401,
+        #                        return_json=False)
+        #     self.finish()
+        #     return
+
+        files = data['data']
+        if not files or 'cores' not in files or 'subs' not in files:
+            # No auth token, no captcha => no access
+            self.send_response(data='400: Bad Request - both "cores" and "subs" are required',
+                               http_status_code=400,
+                               return_json=False)
+            self.finish()
+            return
+
+        cores_file_data = files['cores']
+        subs_file_data = files['subs']
+
+        ## environment is a list of environment variable names and values like [{'name': 'env1', 'value': 'val1'}]
+        environment = self.getarg('environment', default=[]) # optional
+
+        ## Number of parallel job containers to run. The containers will execute identical code. Coordination is the
+        ## responsibility of the job owner.
+        ## replicas = self.getarg('replicas', default=1) # optional
+        replicas = 1
+
+        ## Valid run_id value follows the Kubernetes label value constraints:
+        ##   - must be 63 characters or less (cannot be empty),
+        ##   - must begin and end with an alphanumeric character ([a-z0-9A-Z]),
+        ##   - could contain dashes (-), underscores (_), dots (.), and alphanumerics between.
+        ## See also:
+        ##   - https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#runId
+        ##   - https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+        run_id = self.getarg('run_id', default='') # optional
+        if run_id and (not isinstance(run_id, str) or run_id != re.sub(r'[^-._a-zA-Z0-9]', "", run_id) or not re.match(r'[a-zA-Z0-9]', run_id)):
+            # Invalid FASTA Sequence, return 400
+            self.send_response(data='400: Bad Request - Invalid run_id. Must be 63 characters or less and begin with alphanumeric character and contain only dashes (-), underscores (_), dots (.), and alphanumerics between.',
+                               http_status_code=400,
+                               return_json=False)
+            self.finish()
+            return
+
+        user_id = 'DummyID'
+
+        # Build up path to output dir
+        # FIXME: feature envy?
+        job_id = kubejob.generate_uuid()
+        if not run_id:
+            run_id = job_id
+        job_root_dir = kubejob.get_job_root_dir_from_id(job_id)
+        job_output_dir = os.path.join(job_root_dir, 'out')
+
+        ## Command that the job container will execute. The `$JOB_OUTPUT_DIR` environment variable is
+        ## populated at run time after a job ID and output directory have been provisioned.
+        encoded_cores_data = base64.b64encode(cores_file_data.encode('utf-8')).decode('utf-8')
+        encoded_subs_data = base64.b64encode(subs_file_data.encode('utf-8')).decode('utf-8')
+        mount_path = '/app/data/inputs'
+        #command = f'''echo {encoded_cores_data} | base64 -d > {mount_path}/{run_id}.cores && echo {encoded_subs_data} | base64 -d > {mount_path}/{run_id}.subs && ((python main.py --fasta_data {run_id} >> {job_output_dir}/log) || (touch {job_output_dir}/error && false))'''
+
+        response = kubejob.create_job(
+            image_name='ghcr.io/moleculemaker/molli:ncsa-k8s-job',
+            command="/molli/entrypoint.sh",
+            job_id=job_id,
+            run_id=run_id,
+            owner_id=user_id,
+            replicas=replicas,
+            environment=environment
+        )
+        log.debug(response)
+        if response['status'] != global_vars.STATUS_OK:
+            self.send_response(response['message'], http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+            self.finish()
+            return
+        timeout = 30
+        while timeout > 0:
+            results = kubejob.list_jobs(
+                job_id=response['job_id'],
+            )
+            if results['jobs']:
+                job = construct_job_object(results['jobs'][0])
+                try:
+                    user_agent = self.request.headers["User-Agent"]
+                except:
+                    user_agent = ''
+                queue_position = 0
+                try:
+                    ## TODO: Replace with specialized query that uses the SQL count() command
+                    job_list = []
+                    for phase in ['pending', 'queued', 'executing']:
+                        job_list.extend(db.select_job_records(phase=phase, fields=['id']))
+                    log.debug(job_list)
+                    queue_position = len(job_list)
+                except Exception as e:
+                    log.error(f'''Error querying job queue position: {e}''')
+                try:
+                    command = job['parameters']['command']
+                    if isinstance(command, list):
+                        command = ' '.join(command)
+                    ## TODO: Replace the JSON dump of the full job info with proper table records.
+                    job_info = {
+                        'job_id': job['jobId'],
+                        'run_id': job['runId'],
+                        'user_id': job['ownerId'],
+                        'command': command,
+                        'type': 'molli',
+                        'phase': job['phase'],
+                        'time_created': job['creationTime'] or 0,
+                        'time_start': job['startTime'] or 0,
+                        'time_end': job['endTime'] or 0,
+                        'user_agent': user_agent,
+                        'email': user_email,
+                        'job_info': json.dumps(job, default = self.json_converter),
+                        'queue_position': queue_position,
+                        }
+                    db.insert_job_record(job_info)
+                    ##
+                    ## TODO: This is a hack for testing locally, because the monitor sidecar container
+                    ##       would be calling back to the API server with a job start and end report.
+                    ##
+                    if not config['uws']['job']['monitorEnabled']:
+                        log.debug(f'''Updating started job "{job_info['job_id']}"...''')
+                        db.update_job(
+                            job_id=job_info['job_id'],
+                            phase='executing',
+                            start_time=datetime.utcnow(),
+                        )
+                except Exception as e:
+                    err_msg = f'''Error recording job in database: {e}'''
+                    log.error(err_msg)
+                    self.send_response(err_msg, http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+                    self.finish()
+                    return
+                responseBody = {
+                    'jobId': job['jobId'],
+                    'url' : '/jobId/' + job['jobId'],
+                    'status' : 'executing',
+                    'created_at': job['creationTime'] or 0
+                }
+                self.send_response(responseBody, indent=2, return_json=True)
+                self.finish()
+                return
+            else:
+                timeout -= 1
+                time.sleep(0.300)
+        self.send_response("Job creation timed out.", http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+        self.finish()
+        return
+
+    # TODO: Currently unused, not yet tested
+    def put(self, job_id=None, phase=None):
+        if job_id is None or phase is None:
+            # No auth token, no captcha => no access
+            self.send_response(data='400: Bad Request - both "job_id" and "phase" are required',
+                               http_status_code=400,
+                               return_json=False)
+            self.finish()
+            return
+
+        if not phase in global_vars.VALID_JOB_STATUSES:
+            # No auth token, no captcha => no access
+            self.send_response(data=f'400: Bad Request - phase={phase} is invalid. Try one of {global_vars.VALID_JOB_STATUSES}',
+                               http_status_code=400,
+                               return_json=False)
+            self.finish()
+            return
+
+
+        fields = ['job_id', 'phase', 'time_created']
+        response = {}
+        # If no job_id is included in the request URL, return a list of jobs. See:
+        # UWS Schema: https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#UWSSchema
+
+        try:
+            ## Query for all jobs belonging to the authenticated user
+            # update_job_status(user_id=self._token_decoded["user_id"])
+            # job_list = db.select_job_records(user_id=self._token_decoded["user_id"], phase=phase)
+            log.debug(f'Updating: {job_id} -> {phase}')
+            db.update_job(job_id=job_id, phase=phase)
+
+        except Exception as e:
+            log.error(f'Error while updating job phase - {str(e)}')
+
+
+
+    def get(self, job_id=None, property=None):
+        #job_id = self.getarg('jobId', default='')
+
+        # See https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#resourceuri
+        ## The valid properties are the keys of the returned job data structure
+        valid_properties = {
+            'phase': 'phase',
+            'user_id': 'results',
+            'command': 'command',
+            'run_id': 'run_id',
+            'type': 'type',
+            'job_info': 'job_info',
+        }
+
+        # Check for user, only list email if user logged in
+        user = None
+        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth'][
+            'cookieName'] in self.request.cookies:
+            user = userinfo.validate_auth_cookie(self.request)
+            #log.debug('User: ' + str(user))
+
+        if user is not None:
+            valid_properties['email'] = 'email'
+
+        fields = ['job_id', 'phase', 'time_created']
+        response = {}
+        # If no job_id is included in the request URL, return a list of jobs. See:
+        # UWS Schema: https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#UWSSchema
+        if not job_id:
+
+            # No auth token, no captcha => no access
+            self.send_response(data=f'400: Bad Request - phase={phase} is invalid. Try one of {global_vars.VALID_JOB_STATUSES}',
+                               http_status_code=400,
+                               return_json=False)
+            self.finish()
+            return
+
+        # results = kubejob.list_jobs()
+        try:
+            ## Query for all jobs belonging to the authenticated user
+            # update_job_status(user_id=self._token_decoded["user_id"])
+            # job_list = db.select_job_records(user_id=self._token_decoded["user_id"], phase=phase)
+            job_list = db.select_job_records(job_id=job_id, fields=fields)
+            responseList = []
+            for job in job_list:
+                job['url'] = '/jobId/' + job['job_id']
+                iso_8601_str = job['time_created']
+                responseObject = {'jobId': job['job_id'], 'url': job['url'], 'status': job['phase'],
+                                  'created_at': iso_8601_str}
+                self.send_response(responseObject, indent=2, return_json=True)
+            self.finish()
+            return
+        except Exception as e:
+            self.send_response(f'''Error querying job records: {e}''',
+                               http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
+            self.finish()
+            return
+
+
+class MOLLIResultFileHandler(BaseHandler):
+
+    def get(self, job_id=None):
+        #job_id = self.getarg('jobId', default='')
+        log.info(f'Fetching results for: {job_id}')
+
+        # See https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#resourceuri
+        ## The valid properties are the keys of the returned job data structure
+        valid_properties = {
+            'phase': 'phase',
+            'user_id': 'results',
+            'command': 'command',
+            'run_id': 'run_id',
+            'type': 'type',
+            'job_info': 'job_info',
+        }
+
+        # Check for user, only list email if user logged in
+        user = None
+        if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth'][
+            'cookieName'] in self.request.cookies:
+            user = userinfo.validate_auth_cookie(self.request)
+            #log.debug('User: ' + str(user))
+
+        if user is not None:
+            valid_properties['email'] = 'email'
+
+        fields = ['job_id', 'phase', 'time_created']
+        response = {}
+        # If no job_id is included in the request URL, return a list of jobs. See:
+        # UWS Schema: https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#UWSSchema
+        if not job_id:
+            self.send_response('Empty job ID.', http_status_code=global_vars.HTTP_BAD_REQUEST, indent=2)
+            self.finish()
+            return
+        # If a job_id is provided but it is invalid, then the request is malformed:
+        if not valid_job_id(job_id):
+            self.send_response('Invalid job ID.', http_status_code=global_vars.HTTP_BAD_REQUEST, indent=2)
+            self.finish()
+            return
+        # If a property is provided but it is invalid, then the request is malformed:
+        elif isinstance(property, str) and property not in valid_properties:
+            self.send_response(
+                f'Invalid job property requested. Supported properties are {", ".join([key for key in valid_properties.keys()])}',
+                http_status_code=global_vars.HTTP_BAD_REQUEST, indent=2)
+            self.finish()
+            return
+        try:
+            ## Query the specified job by ID
+            # update_job_status(job_id=job_id)
+            job_list = db.select_job_records(job_id=job_id, fields=fields)
+            try:
+                job = job_list[0]
+            except:
+                job = {}
+            ## TODO: Implement the specific property return if requested
+            ## If a specific job property was requested using an API endpoint
+            ## of the form `/job/[job_id]/[property]]`, return that property only.
+            if property and property in valid_properties.keys():
+                job = job[valid_properties[property]]
+            job['url'] = '/jobId/' + job['job_id']
+            output_dir = '/uws/job/uws/jobs/'
+            exemplarsFileName = job['job_id'] + '/out/new_env_data3_exemplars.json'
+            clustersFileName = job['job_id'] + '/out/new_env_data3_values_and_clusters.json'
+
+            iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
+            responseObject = {'jobId': job['job_id'], 'url': job['url'], 'status': job['phase'],
+                              'created_at': iso_8601_str}
+            exemplarsFullPath = output_dir + exemplarsFileName
+            clustersFullPath = output_dir + clustersFileName
+            log.debug(f'Returning MOLLI result files: exemplars={exemplarsFullPath}, clusters={clustersFullPath}')
+            results = {}
+            with open(exemplarsFullPath, 'r') as f:
+                results['generatedStructures'] = json.loads(f.read().strip())
+            clusters = ''
+            with open(clustersFullPath, 'r') as f:
+                results['clusteringData'] = json.loads(f.read().strip())
+                # TODO: How to get defaultNumberOfClusters?
+                results['clusteringData']['defaultNumberOfClusters'] = 5
+
+            responseObject['results'] = results
+            self.send_response(responseObject, indent=2, return_json=True)
+            self.finish()
+            return
+        except Exception as e:
+            self.send_response(f'''Error querying job records: {e}''', http_status_code=global_vars.HTTP_SERVER_ERROR,
+                               return_json=False)
+            self.finish()
+            return
+
+
 class CLEANSubmitJobHandler(BaseHandler):
     def failed_job_response(self, message):
         responseBody = {
             'jobId': 'failed_job_id',
-            'url' : APPCONFIG['baseUrl'] + '/jobId/' + 'failed_job_id',
+            'url' : '/jobId/' + 'failed_job_id',
             'status' : 'failed',
             'created_at': 0,
             'message': message
         }
         return responseBody
 
-    def verify_captcha(self, captcha_token):
-        hcaptcha_secret = config['hcaptcha']['secret']
-        try:
-            response = requests.request('POST', f'''https://hcaptcha.com/siteverify''', timeout=2,
-                data={
-                    'secret': hcaptcha_secret,
-                    'response': captcha_token,
-                }
-            )
-            try:
-                assert response.status_code in [200, 204]
-                result = response.json()
-                if result['success'] == True:
-                    return True
-                else:
-                    log.error(f'''Invalid CAPTCHA''')
-                    return False
-            except:
-                log.error(f'''Could not verify CAPTCHA''')
-                return False
-        except Timeout:
-            log.warning(f'''Could not verify CAPTCHA''')
-            return False
-        
     def getProteinSeqFromDNA(self, DNA_sequence):
         # define a codon table as a dictionary
         codon_table = {
@@ -620,7 +976,7 @@ class CLEANSubmitJobHandler(BaseHandler):
         user = None
         if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
             user = userinfo.validate_auth_cookie(self.request)
-            log.debug('User: ' + str(user))
+            #log.debug('User: ' + str(user))
 
         # Parse JSON request body
         data = json.loads(self.request.body)
@@ -639,7 +995,7 @@ class CLEANSubmitJobHandler(BaseHandler):
             log.warning('401 Unauthorized - falling back to captcha')
             user_email = data['user_email'] if 'user_email' in data else ''
             # Fallback attempt to hcaptcha without _oauth2_proxy cookie
-            if self.verify_captcha(data['captcha_token']):
+            if userinfo.verify_captcha(data['captcha_token']):
                 pass
             else:
                 # No auth token, no captcha => no access
@@ -734,7 +1090,7 @@ class CLEANSubmitJobHandler(BaseHandler):
         command = f'''echo {encoded_data} | base64 -d > {mount_path}/{run_id}.fasta && ((python CLEAN_infer_fasta.py --fasta_data {run_id} >> {job_output_dir}/log) || (touch {job_output_dir}/error && false))'''
 
         response = kubejob.create_job(
-            image_repo='moleculemaker/clean-image-amd64',
+            image_name='moleculemaker/clean-image-amd64',
             command=command,
             job_id=job_id,
             run_id=run_id,
@@ -808,7 +1164,7 @@ class CLEANSubmitJobHandler(BaseHandler):
                     return
                 responseBody = {
                     'jobId': job['jobId'],
-                    'url' : APPCONFIG['baseUrl'] + '/jobId/' + job['jobId'],
+                    'url' : '/jobId/' + job['jobId'],
                     'status' : 'executing',
                     'created_at': job['creationTime'] or 0
                 }
@@ -821,7 +1177,7 @@ class CLEANSubmitJobHandler(BaseHandler):
         self.send_response("Job creation timed out.", http_status_code=global_vars.HTTP_SERVER_ERROR, return_json=False)
         self.finish()
         return
-        
+
 
 class CLEANStatusJobHandler(BaseHandler):
     def post(self):
@@ -842,7 +1198,7 @@ class CLEANStatusJobHandler(BaseHandler):
         user = None
         if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
             user = userinfo.validate_auth_cookie(self.request)
-            log.debug('User: ' + str(user))
+            #log.debug('User: ' + str(user))
 
         if user is not None:
             valid_properties['email'] = 'email'
@@ -862,7 +1218,7 @@ class CLEANStatusJobHandler(BaseHandler):
                     job_list = db.select_job_records(user_id='DummyID', phase=phase, fields=fields)
                     responseList = []
                     for job in job_list:
-                        job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
+                        job['url'] = '/jobId/' + job['job_id']
                         iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
                         responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
                         responseList.append(responseObject)
@@ -901,7 +1257,7 @@ class CLEANStatusJobHandler(BaseHandler):
             ## of the form `/job/[job_id]/[property]]`, return that property only.
             if property and property in valid_properties.keys():
                 job = job[valid_properties[property]]
-            job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
+            job['url'] = '/jobId/' + job['job_id']
             iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
             responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
             self.send_response(responseObject, indent=2)
@@ -934,7 +1290,7 @@ class CLEANResultJobHandler(BaseHandler):
         user = None
         if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth']['cookieName'] in self.request.cookies:
             user = userinfo.validate_auth_cookie(self.request)
-            log.debug('User: ' + str(user))
+            #log.debug('User: ' + str(user))
 
         if user is not None:
             valid_properties['email'] = 'email'
@@ -970,13 +1326,15 @@ class CLEANResultJobHandler(BaseHandler):
             ## of the form `/job/[job_id]/[property]]`, return that property only.
             if property and property in valid_properties.keys():
                 job = job[valid_properties[property]]
-            job['url'] = APPCONFIG['baseUrl'] + '/jobId/' + job['job_id']
-            output_dir = '/app/results/inputs/'
+            job['url'] = '/jobId/' + job['job_id']
+            output_dir = f'/app/results/inputs/'
             fileName = job['job_id'] + '_maxsep.csv'
             iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
             responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
+            fullPath = os.path.join(output_dir, fileName)
+            log.debug(f'Returning CLEAN result file: {fullPath}')
             input_str = ''
-            with open(output_dir + fileName, 'r') as f:
+            with open(fullPath, 'r') as f:
                 input_str = f.read().strip()
             
             lines = input_str.split('\n')
@@ -1088,11 +1446,20 @@ def make_app(app_base_path='/', api_base_path='api', debug=False):
             (r"{}/{}/uws/job".format(app_base_path, api_base_path), JobHandler),
             (r"{}/{}/uws/report/start/(.*)".format(app_base_path, api_base_path), JobReportStartHandler),
             (r"{}/{}/uws/report/end/(.*)".format(app_base_path, api_base_path), JobReportCompleteHandler),
+            (r"{}/{}/clean/submit".format(app_base_path, api_base_path), CLEANSubmitJobHandler),
+            (r"{}/{}/clean/status".format(app_base_path, api_base_path), CLEANStatusJobHandler),
+            (r"{}/{}/clean/result".format(app_base_path, api_base_path), CLEANResultJobHandler),
+            (r"{}/{}/job/molli/results/(.*)".format(app_base_path, api_base_path), MOLLIResultFileHandler),
+            (r"{}/{}/job/molli/(.*)/(.*)".format(app_base_path, api_base_path), MOLLIJobHandler),
+            (r"{}/{}/job/molli/(.*)".format(app_base_path, api_base_path), MOLLIJobHandler),
+            (r"{}/{}/job/molli".format(app_base_path, api_base_path), MOLLIJobHandler),
+            (r"{}/{}/mailing/add".format(app_base_path, api_base_path), CLEANAddMailingListHandler),
+            (r"{}/{}/mailing/delete".format(app_base_path, api_base_path), CLEANRemoveMailingListHandler),
+
+            # LEGACY - remove these after changing frontends to use /{type}/submit
             (r"{}/{}/job/submit".format(app_base_path, api_base_path), CLEANSubmitJobHandler),
             (r"{}/{}/job/status".format(app_base_path, api_base_path), CLEANStatusJobHandler),
             (r"{}/{}/job/result".format(app_base_path, api_base_path), CLEANResultJobHandler),
-            (r"{}/{}/mailing/add".format(app_base_path, api_base_path), CLEANAddMailingListHandler),
-            (r"{}/{}/mailing/delete".format(app_base_path, api_base_path), CLEANRemoveMailingListHandler),
         ],
         **settings
     )
@@ -1114,6 +1481,9 @@ if __name__ == "__main__":
         db.update_db_tables()
     except Exception as e:
         log.error(str(e).strip())
+
+    watcher = kubewatcher.KubeEventWatcher()
+
     ## Create TornadoWeb application
     app = make_app(
         app_base_path=config['server']['basePath'],

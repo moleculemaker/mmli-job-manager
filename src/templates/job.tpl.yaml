@@ -17,6 +17,12 @@ spec:
         runId: "{{ runId }}"
         ownerId: "{{ ownerId }}"
     spec:
+      {%- if image.pull_secrets %}
+      imagePullSecrets:
+        {% for sec in image.pull_secrets %}
+        - name: "{{ sec }}"
+        {% endfor %}
+      {%- endif %}
       restartPolicy: Never
       # {%- if securityContext %}
       # securityContext:
@@ -54,7 +60,7 @@ spec:
         #   chown {{ securityContext['runAsUser'] }}:{{ securityContext['runAsGroup'] }} "${JOB_OUTPUT_DIR}"
       containers:
       - name: job
-        image: {{ image.repository }}:{{ image.tag }}
+        image: {{ image.repository }}
         imagePullPolicy: {{ image.pull_policy }}
         resources:
           limits:
@@ -104,7 +110,7 @@ spec:
         {%- endfor %}
       {%- if monitorEnabled %}
       - name: monitor
-        image: {{ imageJobMonitor.repository }}:{{ imageJobMonitor.tag }}
+        image: {{ imageJobMonitor.repository }}
         imagePullPolicy: {{ imageJobMonitor.pull_policy }}
         command:
         - 'python3'

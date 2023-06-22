@@ -5,7 +5,7 @@ metadata:
   name: {{ .Release.Name }}-foreman
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: {{ .Release.Name }}-foreman
 rules:
@@ -17,14 +17,14 @@ rules:
     verbs: ["get", "list", "watch", "create", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: {{ .Release.Name }}-foreman
 roleRef:
-  kind: Role
+  kind: ClusterRole
   name: {{ .Release.Name }}-foreman
   apiGroup: rbac.authorization.k8s.io
 subjects:
   - kind: ServiceAccount
     name: {{ .Release.Name }}-foreman
-
+    namespace: {{ .Release.Namespace }}

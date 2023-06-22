@@ -38,8 +38,7 @@ spec:
             mountPath: /etc/config/overrides/server.override.yaml
             subPath: server.override.yaml
           - name: "job-output"
-            mountPath: "/app/results/inputs"
-            subPath: "output"
+            mountPath: "/uws/job/"
           image: {{ .Values.controller.image }}
           env:
           - name: MARIADB_HOST

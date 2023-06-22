@@ -56,9 +56,9 @@ try:
         config['uws'] = override_conf_section('uws', config, conf_overrides)
         config['hcaptcha'] = override_conf_section('hcaptcha', config, conf_overrides)
 
-        log.debug('Overridden config values: ', config)
+        log.debug(f'Overridden config values: {str(config)}')
 except Exception as e:
-    log.warning('Failed to override config values: ', str(e))
+    log.warning(f'Failed to override config values: {str(e)}')
     pass
 
 ## Load secrets from env vars (compatible with Kubernetes Secrets)

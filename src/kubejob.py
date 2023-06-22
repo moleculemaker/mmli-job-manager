@@ -163,7 +163,7 @@ def delete_job(job_id: str) -> None:
     #     raise
 
 
-def create_job(image_repo, command, job_id=None, run_id=None, owner_id=None, replicas=1, environment=None):
+def create_job(image_name, command=None, job_id=None, run_id=None, owner_id=None, replicas=1, environment=None):
     response = {
         'job_id': None,
         'message': None,
@@ -183,16 +183,12 @@ def create_job(image_repo, command, job_id=None, run_id=None, owner_id=None, rep
         ## Set environment-specific configuration for Job definition
         templateFile = "job.tpl.yaml"
         project_subpath = ''
-        image_tag = config['uws']['job']['image']['tag']
-        for envvar in environment:
-            ## Allow individual jobs to override the image tag via the environment variables
-            if envvar['name'] == 'UWS_JOB_IMAGE_TAG':
-                image_tag = envvar['value']
+
         ## Set the image pull policy if specified; otherwise set semi-intelligently
         try:
             pullPolicy = config['uws']['job']['image']['pullPolicy']
         except:
-            pullPolicy = 'Always' if image_tag in ['latest', 'dev'] else 'IfNotPresent'
+            pullPolicy = 'Always' if image_name in [':latest', ':dev'] else 'IfNotPresent'
 
         # all_volumes = [{
         #     'name': 'positions-volume',
@@ -216,6 +212,13 @@ def create_job(image_repo, command, job_id=None, run_id=None, owner_id=None, rep
             templateText = f.read()
         template = Template(templateText)
 
+        try:
+            pullSecrets = config['uws']['job']['image']['pullSecrets']
+            log.info(f"Using image pullSecrets={pullSecrets}")
+        except:
+            pullSecrets = None
+            log.info(f"Using default: pullSecrets=None")
+
         job_body = yaml.safe_load(template.render(
             name=job_name,
             runId=run_id,
@@ -229,13 +232,12 @@ def create_job(image_repo, command, job_id=None, run_id=None, owner_id=None, rep
             ##          the server UID is 1000, then files created by the job will not in general
             ##          allow the server to delete them when cleaning up deleted jobs.
             image={
-                'repository': image_repo,
-                'tag': image_tag,
+                'repository': image_name,
                 'pull_policy': pullPolicy,
+                'pull_secrets': pullSecrets
             },
             imageJobMonitor={
                 'repository': config['uws']['job']['imageJobMonitor']['repository'],
-                'tag': config['uws']['job']['imageJobMonitor']['tag'],
                 'pull_policy': config['uws']['job']['imageJobMonitor']['pullPolicy'],
             },
 

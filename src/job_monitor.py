@@ -5,6 +5,8 @@ from requests.exceptions import Timeout
 from global_vars import log, config
 import shutil
 
+
+
 def report_job_ended(url='', job_id='', token='', phase='completed', numAttempts=5):
     assert job_id and url
     ## Make several attempts to call the API, tolerating timeouts and other errors
@@ -20,7 +22,7 @@ def report_job_ended(url='', job_id='', token='', phase='completed', numAttempts
             )
             try:
                 assert response.status_code in [200, 204]
-                log.debug(f'''Sucessfully reported job "{job_id}" (finished/error). Please check the log file for futher details.''')
+                log.debug(f'''Successfully reported job "{job_id}" (finished/error). Please check the log file for futher details.''')
                 return
             except:
                 log.error(f'''Error reporting job "{job_id}" finished: [{response.status_code}] {response.text}''')

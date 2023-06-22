@@ -20,8 +20,8 @@ from requests.exceptions import Timeout
 
 CONFIG = {
     # 'auth_token': os.environ['SPT_API_TOKEN'],
-    #'apiBaseUrl': 'http://localhost:8888/api/v1',
-    'apiBaseUrl': ' https://jobmgr.mmli1.ncsa.illinois.edu/api/v1',
+    'apiBaseUrl': 'http://localhost:8888/api/v1',
+    #'apiBaseUrl': ' https://jobmgr.mmli1.ncsa.illinois.edu/api/v1',
 }
 
 
@@ -36,19 +36,20 @@ def submit_job(token: str, payload: str = '', environment: list = []) -> dict:
         data['environment'] = environment
 
     cookies = {'_oauth2_proxy': token}
-    ## Submit job
-    response = requests.request('POST',
-        f'''{CONFIG['apiBaseUrl']}/job/submit''',
-        # headers={'Authorization': f'''Bearer {CONFIG['auth_token']}'''},
-        json=data,
-        cookies=cookies
-    )
     try:
+        ## Submit job
+        response = requests.request('POST',
+            f'''{CONFIG['apiBaseUrl']}/job/submit''',
+            # headers={'Authorization': f'''Bearer {CONFIG['auth_token']}'''},
+            json=data,
+            cookies=cookies
+        )
+        response.raise_for_status()
         assert response.status_code in [200, 204]
         job_info = response.json()
-    except:
-        print(f'''[{response.status_code}] {response.text}''')
-        return job_info
+    except Exception as e:
+        print(f'''{str(e)}''')
+        pass
     return job_info
 
 
