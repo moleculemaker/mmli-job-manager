@@ -1,5 +1,7 @@
 import base64
 import os
+import uuid
+
 import global_vars
 from global_vars import config, log
 import tornado.ioloop
@@ -547,6 +549,8 @@ class ResultFileHandler(BaseHandler):
 
 class MOLLIJobHandler(BaseHandler):
     def post(self):
+
+
         user = None
         if 'oauth' in config and 'cookieName' in config['oauth'] and config['oauth'][
             'cookieName'] in self.request.cookies:
@@ -555,7 +559,8 @@ class MOLLIJobHandler(BaseHandler):
 
         # Parse JSON request body
         try:
-            data = json.loads(self.request.body)
+            #data = json.loads(self.request.body)
+            data = self.request.files
         except:
             # Invalid DNA Sequence, return 400
             self.send_response(data='400: Bad Request - JSON body expected',
@@ -576,29 +581,28 @@ class MOLLIJobHandler(BaseHandler):
         user_email = ''
         if user:
             user_email = user['email']
-        # elif 'captcha_token' in data:
-        #     log.warning('401 Unauthorized - falling back to captcha')
-        #     user_email = data['user_email'] if 'user_email' in data else ''
-        #     # Fallback attempt to hcaptcha without _oauth2_proxy cookie
-        #     if userinfo.verify_captcha(data['captcha_token']):
-        #         pass
-        #     else:
-        #         # No auth token, no captcha => no access
-        #         self.send_response(data='401: Unauthorized',
-        #                            http_status_code=401,
-        #                            return_json=False)
-        #         self.finish()
-        #         return
-        # else:
-        #     # No auth token, no captcha => no access
-        #     self.send_response(data='401: Unauthorized',
-        #                        http_status_code=401,
-        #                        return_json=False)
-        #     self.finish()
-        #     return
+        elif 'captcha_token' in data:
+            log.warning('401 Unauthorized - falling back to captcha')
+            user_email = data['user_email'] if 'user_email' in data else ''
+            # Fallback attempt to hcaptcha without _oauth2_proxy cookie
+            if userinfo.verify_captcha(data['captcha_token']):
+                pass
+            else:
+                # No auth token, no captcha => no access
+                self.send_response(data='401: Unauthorized',
+                                   http_status_code=401,
+                                   return_json=False)
+                self.finish()
+                return
+        else:
+            # No auth token, no captcha => no access
+            self.send_response(data='401: Unauthorized',
+                               http_status_code=401,
+                               return_json=False)
+            self.finish()
+            return
 
-        files = data['data']
-        if not files or 'cores' not in files or 'subs' not in files:
+        if not data or 'cores' not in data or 'subs' not in data:
             # No auth token, no captcha => no access
             self.send_response(data='400: Bad Request - both "cores" and "subs" are required',
                                http_status_code=400,
@@ -606,8 +610,8 @@ class MOLLIJobHandler(BaseHandler):
             self.finish()
             return
 
-        cores_file_data = files['cores']
-        subs_file_data = files['subs']
+        cores_file_data = data['cores']
+        subs_file_data = data['subs']
 
         ## environment is a list of environment variable names and values like [{'name': 'env1', 'value': 'val1'}]
         environment = self.getarg('environment', default=[]) # optional
@@ -640,15 +644,23 @@ class MOLLIJobHandler(BaseHandler):
         job_id = kubejob.generate_uuid()
         if not run_id:
             run_id = job_id
-        job_root_dir = kubejob.get_job_root_dir_from_id(job_id)
-        job_output_dir = os.path.join(job_root_dir, 'out')
 
-        ## Command that the job container will execute. The `$JOB_OUTPUT_DIR` environment variable is
-        ## populated at run time after a job ID and output directory have been provisioned.
-        encoded_cores_data = base64.b64encode(cores_file_data.encode('utf-8')).decode('utf-8')
-        encoded_subs_data = base64.b64encode(subs_file_data.encode('utf-8')).decode('utf-8')
-        mount_path = '/app/data/inputs'
-        #command = f'''echo {encoded_cores_data} | base64 -d > {mount_path}/{run_id}.cores && echo {encoded_subs_data} | base64 -d > {mount_path}/{run_id}.subs && ((python main.py --fasta_data {run_id} >> {job_output_dir}/log) || (touch {job_output_dir}/error && false))'''
+        # Write user input files to the shared folder
+        for name in ['cores', 'subs']:
+            # Read uploaded file
+            fileinfo = self.request.files[name][0]
+            #log.debug(f"File info: {fileinfo}")
+
+            # Write file to dest_folder
+            filepath = f'/uws/job/input/{job_id}.{name}'
+            log.debug(f'[molli:{job_id}]  Writing {name} file to: {filepath}')
+            fh = open(filepath, 'wb')
+            fh.write(fileinfo['body'])
+            fh.close()
+
+        # Tell the job to use these files when it runs
+        environment.append({ 'name': 'CORES_INPUT_FILE', 'value': f'/uws/job/input/{job_id}.cores'})
+        environment.append({ 'name': 'SUBS_INPUT_FILE', 'value': f'/uws/job/input/{job_id}.subs'})
 
         response = kubejob.create_job(
             image_name='ghcr.io/moleculemaker/molli:ncsa-k8s-job',
@@ -1327,7 +1339,7 @@ class CLEANResultJobHandler(BaseHandler):
             if property and property in valid_properties.keys():
                 job = job[valid_properties[property]]
             job['url'] = '/jobId/' + job['job_id']
-            output_dir = f'/app/results/inputs/'
+            output_dir = f'/uws/job/output/'
             fileName = job['job_id'] + '_maxsep.csv'
             iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
             responseObject = {'jobId':job['job_id'], 'url': job['url'], 'status': job['phase'], 'created_at': iso_8601_str}
