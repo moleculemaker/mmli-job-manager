@@ -646,21 +646,24 @@ class MOLLIJobHandler(BaseHandler):
             run_id = job_id
 
         # Write user input files to the shared folder
+        input_dir_in_apiserver = '/uws/job/input'
         for name in ['cores', 'subs']:
             # Read uploaded file
             fileinfo = self.request.files[name][0]
             #log.debug(f"File info: {fileinfo}")
 
             # Write file to dest_folder
-            filepath = f'/uws/job/input/{job_id}.{name}'
+            filepath = f'{input_dir_in_apiserver}/{job_id}.{name}.cdxml'
             log.debug(f'[molli:{job_id}]  Writing {name} file to: {filepath}')
             fh = open(filepath, 'wb')
             fh.write(fileinfo['body'])
             fh.close()
 
         # Tell the job to use these files when it runs
-        environment.append({ 'name': 'CORES_INPUT_FILE', 'value': f'/uws/job/input/{job_id}.cores'})
-        environment.append({ 'name': 'SUBS_INPUT_FILE', 'value': f'/uws/job/input/{job_id}.subs'})
+        input_dir_in_container = '/app/data/inputs'
+        environment.append({ 'name': 'CORES_INPUT_FILE', 'value': f'{input_dir_in_container}/{job_id}.cores.cdxml'})
+        environment.append({ 'name': 'SUBS_INPUT_FILE', 'value': f'{input_dir_in_container}/{job_id}.subs.cdxml'})
+
 
         response = kubejob.create_job(
             image_name='ghcr.io/moleculemaker/molli:ncsa-k8s-job',
@@ -787,7 +790,7 @@ class MOLLIJobHandler(BaseHandler):
 
 
 
-    def get(self, job_id=None, property=None):
+    def get(self, job_id=None):
         #job_id = self.getarg('jobId', default='')
 
         # See https://www.ivoa.net/documents/UWS/20161024/REC-UWS-1.1-20161024.html#resourceuri
@@ -848,7 +851,7 @@ class MOLLIJobHandler(BaseHandler):
 
 class MOLLIResultFileHandler(BaseHandler):
 
-    def get(self, job_id=None):
+    def get(self, job_id=None, file_name=None):
         #job_id = self.getarg('jobId', default='')
         log.info(f'Fetching results for: {job_id}')
 
@@ -906,30 +909,41 @@ class MOLLIResultFileHandler(BaseHandler):
             ## of the form `/job/[job_id]/[property]]`, return that property only.
             if property and property in valid_properties.keys():
                 job = job[valid_properties[property]]
-            job['url'] = '/jobId/' + job['job_id']
+
+
+            # Read output file from disk
             output_dir = '/uws/job/uws/jobs/'
-            exemplarsFileName = job['job_id'] + '/out/new_env_data3_exemplars.json'
-            clustersFileName = job['job_id'] + '/out/new_env_data3_values_and_clusters.json'
 
-            iso_8601_str = job['time_created'].replace(tzinfo=utc_timezone).isoformat()
-            responseObject = {'jobId': job['job_id'], 'url': job['url'], 'status': job['phase'],
-                              'created_at': iso_8601_str}
-            exemplarsFullPath = output_dir + exemplarsFileName
-            clustersFullPath = output_dir + clustersFileName
-            log.debug(f'Returning MOLLI result files: exemplars={exemplarsFullPath}, clusters={clustersFullPath}')
-            results = {}
-            with open(exemplarsFullPath, 'r') as f:
-                results['generatedStructures'] = json.loads(f.read().strip())
-            clusters = ''
-            with open(clustersFullPath, 'r') as f:
-                results['clusteringData'] = json.loads(f.read().strip())
-                # TODO: How to get defaultNumberOfClusters?
-                results['clusteringData']['defaultNumberOfClusters'] = 5
+            if file_name:
+                resultJsonFullPath = os.path.join(output_dir, job['job_id'], 'out', file_name)
+                log.debug(f'Returning MOLLI result file: {resultJsonFullPath}')
+                with open(resultJsonFullPath, 'r') as f:
+                    file_contents = f.read().strip()
 
-            responseObject['results'] = results
-            self.send_response(responseObject, indent=2, return_json=True)
-            self.finish()
-            return
+                self.finish()
+                return
+            else:
+                gen_struct_file_path = os.path.join(output_dir, job['job_id'], 'out', 'test_combine_new_env_library.json')
+                clustering_pca_file_path = os.path.join(output_dir, job['job_id'], 'out', 'new_env_data3_pca')
+                clustering_tsne_file_path = os.path.join(output_dir, job['job_id'], 'out', 'new_env_data3_tsne')
+                with open(gen_struct_file_path, 'r') as gen, open(clustering_pca_file_path, 'r') as pca, open(clustering_tsne_file_path, 'r') as tsne:
+                    response_obj = {
+                        'jobId': job['job_id'],
+                        'url': '/results/' + job['job_id'],
+                        'status': job['phase'],
+                        'created_at': job['time_created'].replace(tzinfo=utc_timezone).isoformat(),
+                        'results': {
+                            'structures': json.loads(gen.read().strip()),
+                            'clusteringData': {
+                                'pca': json.loads(pca.read().strip()),
+                                'tsne': json.loads(tsne.read().strip())
+                            }
+                        }
+                    }
+                    self.send_response(response_obj, indent=2, return_json=True)
+
+                self.finish()
+                return
         except Exception as e:
             self.send_response(f'''Error querying job records: {e}''', http_status_code=global_vars.HTTP_SERVER_ERROR,
                                return_json=False)
@@ -1461,8 +1475,8 @@ def make_app(app_base_path='/', api_base_path='api', debug=False):
             (r"{}/{}/clean/submit".format(app_base_path, api_base_path), CLEANSubmitJobHandler),
             (r"{}/{}/clean/status".format(app_base_path, api_base_path), CLEANStatusJobHandler),
             (r"{}/{}/clean/result".format(app_base_path, api_base_path), CLEANResultJobHandler),
-            (r"{}/{}/job/molli/results/(.*)".format(app_base_path, api_base_path), MOLLIResultFileHandler),
-            (r"{}/{}/job/molli/(.*)/(.*)".format(app_base_path, api_base_path), MOLLIJobHandler),
+            (r"{}/{}/job/molli/(.*)/results/(.*)".format(app_base_path, api_base_path), MOLLIResultFileHandler),
+            (r"{}/{}/job/molli/(.*)/results".format(app_base_path, api_base_path), MOLLIResultFileHandler),
             (r"{}/{}/job/molli/(.*)".format(app_base_path, api_base_path), MOLLIJobHandler),
             (r"{}/{}/job/molli".format(app_base_path, api_base_path), MOLLIJobHandler),
             (r"{}/{}/mailing/add".format(app_base_path, api_base_path), CLEANAddMailingListHandler),
