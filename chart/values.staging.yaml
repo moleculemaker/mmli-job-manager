@@ -51,10 +51,18 @@ extraDeploy:
       - DELETE
       - POST
       accessControlAllowOriginList:
-      - https://clean.frontend.mmli1.ncsa.illinois.edu
-      - https://clean.frontend.staging.mmli1.ncsa.illinois.edu
-      - https://jobmgr.mmli1.ncsa.illinois.edu
-      - https://jobmgr.staging.mmli1.ncsa.illinois.edu
+      - 'https://clean.frontend.mmli1.ncsa.illinois.edu'
+      - 'https://clean.frontend.staging.mmli1.ncsa.illinois.edu'
+      - 'https://jobmgr.mmli1.ncsa.illinois.edu'
+      - 'https://jobmgr.staging.mmli1.ncsa.illinois.edu'
+      - 'https://chemscraper.frontend.mmli1.ncsa.illinois.edu'
+      - 'https://chemscraper.frontend.staging.mmli1.ncsa.illinois.edu'
+      - 'https://chemscraper.backend.staging.mmli1.ncsa.illinois.edu'
+      - 'https://chemscraper.backend.mmli1.ncsa.illinois.edu'
+      - 'https://mmli.fastapi.staging.mmli1.ncsa.illinois.edu'
+      - 'https://mmli.fastapi.mmli1.ncsa.illinois.edu'	
+      - 'https://molli.frontend.mmli1.ncsa.illinois.edu'	
+      - 'https://molli.frontend.staging.mmli1.ncsa.illinois.edu'
 
 # Enable DecentCI backups
 - apiVersion: v1
