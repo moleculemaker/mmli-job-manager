@@ -8,7 +8,7 @@ ingress:
     traefik.ingress.kubernetes.io/router.middlewares: staging-cors-header@kubernetescrd
 
 controller:
-  image: moleculemaker/mmli-job-manager:main
+  image: moleculemaker/mmli-job-manager:staging
 
 persistence:
   existingClaim: "mmli-clean-job-weights"
