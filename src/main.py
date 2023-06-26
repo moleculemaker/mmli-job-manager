@@ -666,7 +666,7 @@ class MOLLIJobHandler(BaseHandler):
 
 
         response = kubejob.create_job(
-            image_name='ghcr.io/moleculemaker/molli:ncsa-k8s-job',
+            image_name='ghcr.io/moleculemaker/molli:ncsa-workflow',
             command="/molli/entrypoint.sh",
             job_id=job_id,
             run_id=run_id,
