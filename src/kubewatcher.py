@@ -18,20 +18,7 @@ from dbconnector import DbConnector
 from global_vars import config, log
 import kubejob
 
-CRD_GROUP_NAME = "ndslabs.org"
-CRD_VERSION_V1 = "v1"
-CRD_APPSPECS_PLURAL = "workbenchappspecs"
-CRD_USERAPPS_PLURAL = "workbenchuserapps"
-CRD_APPSPECS_KIND = "WorkbenchAppSpec"
-CRD_USERAPPS_KIND = "WorkbenchUserApp"
 
-BASE_URL = 'http://localhost:5000'
-
-custom = client.CustomObjectsApi()
-
-
-
-# TODO: V2 - watch custom resources and react accordingly
 # watched_namespaces = ["test"]
 # for namespace in watched_namespaces:
 #    count = 10
@@ -52,7 +39,7 @@ custom = client.CustomObjectsApi()
 class KubeEventWatcher:
 
     def __init__(self):
-        self.logger = logging.getLogger('kube-event-watcher')
+        self.logger = log
         #self.logger.setLevel('DEBUG')
         self.thread = threading.Thread(target=self.run, name='kube-event-watcher', daemon=True)
         # Get global instance of the job handler database interface
@@ -71,17 +58,11 @@ class KubeEventWatcher:
     def run(self):
         kubeconfig.load_incluster_config()
 
-
         # Ignore kube-system namespace
         # TODO: Parameterize this?
         ignored_namespaces = ['kube-system']
         self.logger.info('KubeWatcher watching all namespaces except for: ' + str(ignored_namespaces))
 
-        # Include workbench app labels
-        # Example:      'labels': {'manager': 'workbench',
-        #                          'pod-template-hash': '977967b76',
-        #                          'user': 'test',
-        #                          'workbench-app': 's00402'}
         # TODO: Parameterize this?
         required_labels = {
             'type': 'uws-job'
@@ -115,9 +96,14 @@ class KubeEventWatcher:
                         self.logger.debug('Skipping event in excluded namespace')
                         continue
 
-                    # Examine labels, ignore if not workbench app
+                    # Examine labels, ignore if not uws-job
                     # self.logger.debug('Event recv\'d: %s' % event)
                     labels = event['object'].metadata.labels
+
+                    if labels is None and len(required_labels) > 0:
+                        self.logger.warning(
+                            'WARNING: Skipping due to missing label(s): ' + str(required_labels))
+                        continue
 
                     missing_labels = [x for x in required_labels if x not in labels]
                     if len(missing_labels) > 0:
@@ -131,7 +117,7 @@ class KubeEventWatcher:
                     # Parse name into userapp_id + ssid
                     segments = name.split('-')
                     if len(segments) < 3:
-                        self.log.warning('WARNING: Invalid number of segments -  JobName=%s' % name)
+                        self.logger.warning('WARNING: Invalid number of segments -  JobName=%s' % name)
                         continue
 
                     # uws-job-jobid => we want last segment
@@ -141,6 +127,7 @@ class KubeEventWatcher:
                     status = event['object'].status
                     conditions = status.conditions
 
+                    # Calculate new status
                     self.logger.debug(f'Event: job_id={job_id}   type={type}   status={status}')
                     new_phase = None
                     if type == 'MODIFIED' and conditions is None:
@@ -153,6 +140,7 @@ class KubeEventWatcher:
                         self.logger.debug(f'>> Skipped job update: {job_id}-> {new_phase}')
                         self.logger.debug(f'>> Status: {str(status)}')
 
+                    # Write status update back to database
                     if new_phase is not None:
                         self.logger.debug('Updating job phase: %s -> %s' % (job_id, new_phase))
                         self.db.update_job(
@@ -160,15 +148,6 @@ class KubeEventWatcher:
                             phase=new_phase,
                         )
                         self.logger.debug('Updated job phase: %s -> %s' % (job_id, new_phase))
-
-
-                    # Calculate new status/endpoints and write to db
-                    #job_status = determine_new_status(type, phase, conditions)
-                    #write_status(job_id, job_status)
-
-                    #log.info(
-                    #    'UserappId=%s  ServiceKey=%s  type=%s  phase=%s  ->  status=%s  endpoints=%s' % (
-                    #    userapp_id, service_key, type, phase, service_status, str(service_endpoints)))
             except urllib3.exceptions.ProtocolError as e:
                 self.logger.error('KubeWatcher reconnecting to Kube API: %s' % str(e))
                 if k8s_event_stream:

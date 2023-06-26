@@ -594,13 +594,13 @@ class MOLLIJobHandler(BaseHandler):
                                    return_json=False)
                 self.finish()
                 return
-        else:
-            # No auth token, no captcha => no access
-            self.send_response(data='401: Unauthorized',
-                               http_status_code=401,
-                               return_json=False)
-            self.finish()
-            return
+        # else:
+        #     # No auth token, no captcha => no access
+        #     self.send_response(data='401: Unauthorized',
+        #                        http_status_code=401,
+        #                        return_json=False)
+        #     self.finish()
+        #     return
 
         if not data or 'cores' not in data or 'subs' not in data:
             # No auth token, no captcha => no access
