@@ -79,7 +79,7 @@ extraDeploy:
       - 'https://clean.frontend.mmli1.ncsa.illinois.edu'
       - 'https://molli.frontend.mmli1.ncsa.illinois.edu'
       - 'https://jobmgr.mmli1.ncsa.illinois.edu'
-	
+
       # Staging: chemscraper-frontend -> mmli-backend -> chemscraper-backend
       - 'https://chemscraper.frontend.staging.mmli1.ncsa.illinois.edu'
       - 'https://mmli.fastapi.staging.mmli1.ncsa.illinois.edu'
