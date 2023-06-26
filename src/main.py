@@ -919,7 +919,7 @@ class MOLLIResultFileHandler(BaseHandler):
                 log.debug(f'Returning MOLLI result file: {resultJsonFullPath}')
                 with open(resultJsonFullPath, 'r') as f:
                     file_contents = f.read().strip()
-
+                    self.send_response(file_contents)
                 self.finish()
                 return
             else:
