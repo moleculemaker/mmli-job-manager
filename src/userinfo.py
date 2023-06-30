@@ -1,17 +1,37 @@
-import logging
 import re
 import requests
+from requests import Timeout
 
-from global_vars import config
-
-logger = logging.getLogger('pkg.auth.oauth2')
-logger.setLevel('DEBUG')
+from global_vars import config, log
 
 
 SSL_VERIFY = True
 OAUTH_USERINFO_URL = config['oauth']['userInfoUrl']
 OAUTH_COOKIE_NAME = config['oauth']['cookieName']
 
+def verify_captcha(captcha_token):
+    hcaptcha_secret = config['hcaptcha']['secret']
+    try:
+        response = requests.request('POST', f'''https://hcaptcha.com/siteverify''', timeout=2,
+                                    data={
+                                        'secret': hcaptcha_secret,
+                                        'response': captcha_token,
+                                    }
+                                    )
+        try:
+            assert response.status_code in [200, 204]
+            result = response.json()
+            if result['success']:
+                return True
+            else:
+                log.error(f'''Invalid CAPTCHA''')
+                return False
+        except:
+            log.error(f'''Could not verify CAPTCHA''')
+            return False
+    except Timeout:
+        log.warning(f'''Could not verify CAPTCHA''')
+        return False
 
 def userinfo(access_token) -> dict:
     try:
@@ -39,18 +59,18 @@ def userinfo(access_token) -> dict:
             'sub': username
         }
     except Exception as e:
-        logger.debug(f'OAuth2 token verification failed for token={str(access_token)}')
-        logger.warning(f'OAuth2 token verification failed: {str(e)}')
+        log.debug(f'OAuth2 token verification failed for token={str(access_token)}')
+        log.warning(f'OAuth2 token verification failed: {str(e)}')
         pass
 
 
 def get_token_from_request_cookies(request):
     token = request.cookies[OAUTH_COOKIE_NAME].value if OAUTH_COOKIE_NAME in request.cookies else None
-    logger.debug('Found get_token: ' + str(token))
+    #log.debug('Found get_token: ' + str(token))
     return token
 
 # TODO: required scopes currently ignored
 def validate_auth_cookie(request, required_scopes=[]):
     token = get_token_from_request_cookies(request)
-    logger.debug('Found validate_token: ' + str(token))
+    #log.debug('Found validate_token: ' + str(token))
     return userinfo(token)

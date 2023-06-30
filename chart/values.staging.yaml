@@ -8,7 +8,7 @@ ingress:
     traefik.ingress.kubernetes.io/router.middlewares: staging-cors-header@kubernetescrd
 
 controller:
-  image: moleculemaker/mmli-job-manager:main
+  image: moleculemaker/mmli-job-manager:staging
 
 persistence:
   existingClaim: "mmli-clean-job-weights"
@@ -28,6 +28,25 @@ hcaptcha:
     existingSecret: "hcaptcha"
 
 extraDeploy:
+# Docker credentials for pulling private molli Docker image
+- apiVersion: bitnami.com/v1alpha1
+  kind: SealedSecret
+  metadata:
+    creationTimestamp: null
+    name: regcred
+    namespace: staging
+  spec:
+    encryptedData:
+      .dockerconfigjson: AgBtsgziBR0lMJLgVbe7az6N73BH6caF1dGiMQleUMjaR687O/ovf9esCpsZLIDg7xuRW39FsIGe5/2CRYBZs6j4tP32IW1jag4Qp+E0AV8hpbskrYHqwEjHof8tcRFgw625WeYS/WNbAJRPS54+VvHh5iRcZTE5bZ6edLMB5apxSsoQ+9Hs8GXgDHrgiyQWMAAyPDCIowLVpYEWX8QkwVmvXGKV5U51/iWAChFSaI/ZPiELCJTgjtQ5S2QX+FHqcRSVcwW8KZpmY31vsVG+BotvBYgViaG54Ve8nbOEcJW9FI4vICus9OqMd5Ow4ZN1iwmByzxB4zAhNRTRpoKHcFeUEffu1OB7zg2TALN2L/RtRixj2VudbHGq/QLrjhNkzZ8eY/Qg4fyejFd51jbNsWEH9rXLzjQkUrzKiOiEAXUXSmLfckCTYHPIUYoF6CiHchZ9HF7JgqMkTB5v8y10mOUMNI/R7tAtKf0nyDGDY97wwVMZRrsbAuXgx1gL0BJM+Hjso2YaIExjh2OFH5IPOkXc6CtE2VJS0yhKLmns8rnNeCgQFrTEVSlY59tmhGId4DqV008Pun8LRavIezABcGMO2wqehVBL4MKm8nB4T/up/a+TxMtTS5vcL55kG983+cRg/ZbYHv51uCXsuWBlsDePGn4HFPCQqpq7me4qV8VMyxZ+l8XYMXJg9X7ow8x0MTqvH33X2makX0QO42+DLZvE1SEw3SGnt8gNESniZeSeRUrxSaiRByLMnq5qU90Z39Fn6s7qsotAxP9cHZ/e6mfE2CsDWE/wklqB6VAakk3aF8LTrPLRGDZecQEu/nDoi23Y8Xsy9u8mVkqZtn9guj+TMgxWqDdMELDfAKVaCZG6k7TETqSG7EucvBQ1k29bNIV39qVZcXjNuhtJGM89a+rxJpbCynSrkV3J9LKRJ6WI3JQw
+    template:
+      metadata:
+        creationTimestamp: null
+        name: regcred
+        namespace: staging
+      type: kubernetes.io/dockerconfigjson
+
+
+
 # Deploy CORS middleware for staging namespace
 - apiVersion: traefik.containo.us/v1alpha1
   kind: Middleware
@@ -51,10 +70,29 @@ extraDeploy:
       - DELETE
       - POST
       accessControlAllowOriginList:
-      - https://clean.frontend.mmli1.ncsa.illinois.edu
-      - https://clean.frontend.staging.mmli1.ncsa.illinois.edu
-      - https://jobmgr.mmli1.ncsa.illinois.edu
-      - https://jobmgr.staging.mmli1.ncsa.illinois.edu
+      # Prod: chemscraper-frontend -> mmli-backend -> chemscraper-backend
+      - 'https://chemscraper.frontend.mmli1.ncsa.illinois.edu'
+      - 'https://mmli.fastapi.mmli1.ncsa.illinois.edu'	
+      - 'https://chemscraper.backend.mmli1.ncsa.illinois.edu'
+
+      # Prod: CLEAN / MOLLI -> JobMgr
+      - 'https://clean.frontend.mmli1.ncsa.illinois.edu'
+      - 'https://molli.frontend.mmli1.ncsa.illinois.edu'
+      - 'https://jobmgr.mmli1.ncsa.illinois.edu'
+
+      # Staging: chemscraper-frontend -> mmli-backend -> chemscraper-backend
+      - 'https://chemscraper.frontend.staging.mmli1.ncsa.illinois.edu'
+      - 'https://mmli.fastapi.staging.mmli1.ncsa.illinois.edu'
+      - 'https://chemscraper.backend.staging.mmli1.ncsa.illinois.edu'
+
+      # Staging: CLEAN / MOLLI -> JobMgr
+      - 'https://clean.frontend.staging.mmli1.ncsa.illinois.edu'
+      - 'https://molli.frontend.staging.mmli1.ncsa.illinois.edu'
+      - 'https://jobmgr.staging.mmli1.ncsa.illinois.edu'
+
+      # Local: for local testing pointed at staging
+      - 'http://localhost:4200'	
+      - 'http://test.mydomain.com'
 
 # Enable DecentCI backups
 - apiVersion: v1
@@ -128,6 +166,7 @@ config:
   oauth:
     userInfoUrl: "http://oauth2-proxy.oauth2-proxy.svc.cluster.local/oauth2/userinfo"
   uws:
+    imagePullSecret: "regcred"
     ## Server working directory to store generated job data
     workingVolume:
       claimName: "mmli-clean-job-weights"

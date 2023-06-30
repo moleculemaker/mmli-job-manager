@@ -18,27 +18,36 @@ db:
 hcaptcha:
   secret: "ChangeThisInProduction"
 oauth:
-  userInfoUrl: "http://oauth2-proxy.oauth2-proxy.svc.cluster.local/oauth2/userinfo"
+  userInfoUrl: "http://oauth2.proxy.local/oauth2/userinfo"
   cookieName: "_oauth2_proxy"
 email:
   server: "smtp.ncsa.uiuc.edu"
   fromEmail: "devnull+clean@ncsa.illinois.edu"
   fromName: "no-reply-CLEAN"
+
+clean:
+  job:
+    image: "moleculemaker/clean-image-amd64:latest"
+
+
+molli:
+  job:
+    image: "moleculemaker/molli:ncsa-workflow"
+
 uws:
   job:
-    monitorEnabled: true
+    monitorEnabled: false
     imageJobMonitor:
-      repository: "moleculemaker/mmli-job-manager"
-      tag: "latest"
+      repository: "moleculemaker/mmli-job-manager:latest"
       pullPolicy: "Always"
     image:
-      repository: "moleculemaker/clean-image-amd64"
-      tag: "latest"
+      repository: "moleculemaker/clean-image-amd64:latest"
       pullPolicy: "Always"
       ## Image pull secrets if necessary
       # pullSecrets:
       # - name: my-secret
-      pullSecrets: []
+      pullSecrets:
+      - regcred
     ## Abort jobs after 3 days regardless of their behavior
     activeDeadlineSeconds: 259200
     ## Cleanup completed/failed jobs after 12 hours
