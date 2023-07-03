@@ -30,7 +30,7 @@ extraDeploy:
   kind: ConfigMap
   metadata:
     name: backups
-    namespace: job-manager
+    namespace: alphasynthesis
     labels:  
       app.kubernetes.io/name: decentci-backups
       app.kubernetes.io/component: config
@@ -40,7 +40,7 @@ extraDeploy:
         schedule: "01 7 * * *"
         database:
           type: mysql
-          host: job-manager-mariadb.job-manager.svc.cluster.local
+          host: job-manager-mariadb.alphasynthesis.svc.cluster.local
           auth:
             username: mmli
             database: mmli
@@ -57,16 +57,18 @@ extraDeploy:
   metadata:
     creationTimestamp: null
     name: hcaptcha
-    namespace: job-manager
+    namespace: alphasynthesis
   spec:
     encryptedData:
-      secret: AgAX5Xzeavp/TcJ6dkShk526pEZFdoQf5R5TGsdIOoVjHr9Nm3CsYli8WV4q8OMgRzTiSZ4K2aQXM1t8UtcDBIWX0bklsD9D2goTrkqTKJQ9Qk20fbqZb/YYTSc4xDnjtVZ4HKmYER8pqBOtBgoh+QwXee+AcBSZFMrh1djAMW76yxddDRqIQdsGzI53YO/1QnmFWLHEe4ogHhOsADb1pqLYALYVn+zh3FA40jWTHi5e28me+fXJP/y10d9bYpp62VTzEYt778RMeCy0cUR8cxWpHCSJX+ZqPjWCXcJRjhvy+TnCqpY2+kB3BVSFYY55m9WFoUZ2ovj6fCBPPU+BpfcfZlAvT+tkh2xoMT3YB/awsDKAaYPQLWvZ1E0La1KLp9/IIFZVe8BLjdF9gtf7U650OvZ7LMfwvysMnfWL6Z/RPZwft+eEw+YtB691O8cIhmhFLxBQRlpqOWQfLXOm2wakib1DcWL+vnI+nbo2x0qbzSYalSy4LOqG7wWJ4q1O9//1ceuoGESiVPPx7iUGd0HiJPo324tbBevyYVji0wlJpUhwzdqvlyl1XWzDx2I+U8S0ypTpmDpWjONreGf/VNZSJNnih8Qwx7enan79PHxYfj1jfmiCZ6Efni9wctndPAa39AWftnTAA4fXQnUoxhTgo0lLw6NsMNYo2VxUqvG9IhCcOM4BwaRwen32KdsgJmOpku+J6kMpEjQ9E6xAyay8QIaIz6Bw/qwVW+1iFPUa5jiYgPmxPF2Pbx8=
+      secret: AgCH51LceQbkFZAEdjs2Uz+7u/sF7pi3Wj8pSCclC/TByqsW+JJ04YxqCRNL4X0OQDBQqNwa6P2nCJszJECBXcd+Xxlk5ZTBNBjbDy3ibgY6r7lToN6HYkEjHGIhDd9eCzq0LBjHeCD2p8LJqrwTKxREkw+ISc4z0D0RH2Fuq+5jXzcu2TUFhiP2q3NR78h2IcZ2uKyynZzOcpBFHTs7lbeq54XT6OjTV4XWrZFEMrpUapAmPvIbXj1Rx4aNhMkBhPZ/zTR7fWQMhkqL4h7dHIyB8cVJuwQJN96v21CjqGpHnXC0lxFwaAadmE+31aQv+9Rk+KRbegSjpZR4tsxAN4KsK6YivY50rmT/fRhHmfpHJ0YeJ+Knq8shWJua5pXFHN/hCH23v2ldlucxHgT9AqzoKYZ/HqqCAsy/4QPVPFsSUk7DhL/NIzP3P3rc0nF+Va32EggtQOv3CmogNu7Yio/ca7ZdAAMHT1+o7KoJAKIpVsCtoi7HZYkzgRUyi2onZsqHcJTwh+EHRB3UBIY0TGEreWRiqK5hqifOpbjQ77IpQjVIMhPU/CziQhJoaeYw6S3bXmGR/zih1jiPYCrWCaNoF0EbI4qnNfdYcqkiUpbW9qrm69MrDJ0ulTdKcVZ+yF5TKofn1ZTT56fQY7aHK5POtcjkKvYlJzZiq+TC+/NhQnfOKpkLSM+Kw1yxEf3529YriJO3/HeaRyvijuuazg1KCJy7XBpGTJqSfRZlDrI2/tXlmYsC/RkdPFo=
     template:
       metadata:
         creationTimestamp: null
         name: hcaptcha
-        namespace: job-manager
+        namespace: alphasynthesis
       type: Opaque
+
+
 
 # Deploy SealedSecrets for database credentials
 - apiVersion: bitnami.com/v1alpha1
@@ -74,18 +76,19 @@ extraDeploy:
   metadata:
     creationTimestamp: null
     name: job-manager-mariadb
-    namespace: job-manager
+    namespace: alphasynthesis
   spec:
     encryptedData:
-      mariadb-password: AgCRJoLJdnW9apTbjbsi3dNkEpzw4IwK1o7RzleHLxq/izS8XIWB142qd3ICngMHVZrcZPr8xUwvKO3lYfGrOZx1hKPR4blHTeF/ReomsQryfVobVKzW0/ScS2qJhFD4To/n0VvaISWXBdSXl5ttw9FYR3tgpWarilwUCxRtohF+vCIyw8szrnf4b9Cjz1NXtqSsG27nAdHFVJDoVME0tOqhncyqK++KsOEmYJxxQ95LAFqk2jXTUgFLxfOnA8AcLV4mW1k4uxPdU07brVU5+GZumtOElYmVompzkBykUbEXKiR7hoARptg5ErwvIYVUtL8LejxT66Ae9xqB6q3HHCtgt3HmbUIjv838OceSsdEzjSdtIh5QNiFwy8vWaKW45Q4gyMcx3g53TyOyBeEgqTeaqP9SMZUlH7L7nZVojuOufsQjxmKr46uzNgW5nqMpOjekiOsqMmdO8RMBahLCDQklQsMOmWyV+8rDUQndHedZRWy1mb2w/dCcTzivcKmI9RejD5DI51XkXGSSCCy1QyKo2pLzai5vgY0pafy03ABx9D85r21KEFVEqo7pvTD3pdq6d4fZvDwMZx+k8i+00VLVEZyvIO4kF2AO6XMBeeDa+h+so4otzJ6zUJNes4UfTwqB43D0xxrum7l9U28oRQBF7jUsVPNjXU7D534kkjmsjD50khEPeNSIZJ+l+5WxLJ7JVmG52mDcDLvUTwOq4oa3r56K9/sMUpzw2VE5EC6R+zo6pKn55WNo
-      mariadb-replication-password: AgBFAD5Om1KIH4c1i/XqCT4nMeFl8avpT9EzW0mIX6LnP73sbIs32S+05MD+1NIGzTQCHNntfxkYQIMJDQn6InYM/T5SAcSbJDnBK4XMXYp9hR4EPb0aYGyWw2AHJLh7Qz9fkB0WaWr6ARWWZXLMFsTzvTLfWo4aY7tbhAvTY13Yg+P/TGU8M2FoRA7TLG7mDrzSQh5875vk4J+ctGqNuUvtix1cT8zl/xxHu6W3mkfbZF4A1fBHtrBbFsiyVu7HjioCJh3yjqTLY5IuW3dqFri+Vtyk57v8otqvTNEVSk9av1+f5d8WkuDI3vSMnH3Ro0y1p0jFJmpA9mRX96M37hI07dKieXURcGv7iKmSSkHChdf+OrJrMmSnC0VSJsXyNEuLwBCr9zIgutMEx/8PEWPSqlRpJL02jtDactXRVeG14gH8pn/cb/rk2IcL7QDtMhPlehyWTR5ZsGD63AXXa7LlAeBNXSRRXaNg/cGi3C+Tydd9qzZsetOIlcVrRH4wdwhvfS81Az65MMyDm35/BNQMstViDxcW3SrbNo8Tra9OPzcUltSHwyqN/8XSXlhSMVs/d2BeA59qqrr0H48lRlDBwHZDokXfEVnPsVF9DOIZV1sLyCveQVUqBK9LKDGiIhXkphE1g4vqpK/uCoCW4eFq3YQJNqO38GNEcfGWzwoAT+80KzNVi9ixYqBhySnAYun40R6WUQc42j69YEIZI+EgrbXabUlQUVk9EJy+57zhdEnt9rXyl2eS
-      mariadb-root-password: AgAd0e+th3yGm6fd0hzDrCnEw/uQc8ccUYZ5PIXUxG2EvhzB6BoZlQYgI/aSnb0nXekMZDnUxrZlW+Wvlm+IPe4xu+sguiFANymoVejHUMAq1RNyjkGtJCT8DNE6I5fGoGcL5ynhg9CB81+HeWJAF1WfO8SACSxevWcvghyfGSJd3/Ixf1E+FiEQO4fVJvsEmVES7LJn0rJi4s2yyV5NbVc3hbAbRlfWT4MhT5ThAeg8mx5EOaBibqK8e1jI/GGpAI3g3Qpher0t746GDwZ9NQcJqIJmJBu/iYhvbwzqeYWKiW/+RSfpMf1bV0xb+qFbLGRfLt6IqfI271XYebgcKe68pcwCXPL5GWxeUTfg8hvk/HYBcV7Tsib6rj/GhyMerh+C75Tkqo4YZgIJCgjTgkZ9JufA+m52LLS63Z1eKJ7k0IRWbZ4SHlhv2v8f4Yg/UWRFke563+Fbxi7YjuTPUaeGyZJWZgIzd3L9R38SXXtJFoHPsNUN39thRAX+dq1TAxb46U/Vsvn8Ipz7eYaPEFZluic9/zAOyNzWvEVdEi0ci4CFiduqvyPdI9iRG+66ji3qg1rukYcYq3sfdnLfaatL9TobVGy3c+ROM7eNGOLZxKYUxV9UrNneaIkGEINij81mvEQCIRM6dgtac68A/3s00lGbzFeTqJd1P310eDjT1pAVtL3THzEN9ptsNAVu1FfFUA0FRnZAteBoSUjQMekUvfIb2EduNaEG9SpGPz9mE8mqjZckkr7m
+      mariadb-password: AgCyE/Y88DcZ4J/hfosRmLH2e+NPlIz11cY4e9J7u0FTc7/hlatrnyLh+i9NoTQRtDW/RosF2u4QTVab3MXRbgLAUOHYId3fZ4NHtwIJFHeWGsEich4ZLc7OwNi9zOvlEMYLjx9BJctjJiY1XLhVrJARiSgemPCHcKIaXtAMDBQVB6A1/jgixEFLGEWf/MSFoCuRE8fAyryS9yIaEkWpb4VelH08hjsBGyLYHkBZgJ4gulMUuim6wD357zWV28DgBvzZPJdGLNo14v8SBvWiA3ibozAQGtG/AxcMz+3ANMztUN5y5y7PDyBa4ruFV/yvHI6lAEbYEiJ4oo4/9bhNrFSQ2aomMKPcZFwXbla6NuJzN4wscviQHYOj5koZzoOwNjM8rU2FF1xu4xmiPgsH6A3TbXIFCL3woe5F0hHDstVGSlGbLzhNCxkXPW/4Q93NGIpnBczlMPYUfcv3WE1sYsvsJ7Mph6NZOkx119jlcRvZCGziIbSCBvrwlvBZSUa1PuTfLChFLan89ycBwgCBF6BJqWz+Qu6vXjIo4Kqk7ZNqnmEWTH91qXJyJqV9ivHSPg1KRU/fTVCAqDuYWbc7bU+IBOyyz+XpWkQ0YIvQUjmlog/OzbfC2KOUx1LC8CAkPHd4PcNbqAi3yUaW+bfGQi5wILhtz6m8by9dZYYnb3+zZhJzW9WBjKMplONf4+1fFhB7N8vchGBKWMjhRILVa22fqQ/tx2xjlJJWXClOX/DCrHbUyI0REfGC
+      mariadb-replication-password: AgA9xhjqmk+1F+Dp3ydlug8htguuOrgeDhi3JU/8xNJ6IMbjxirNDjyPYexYycHnX+Es4zBotwLMhOhkqwMx1gzZ5l3Lll54UVFJYgmsMLleex/N1qxrmIxeYLDn458SOEQ7TWnCYUTFqG6e4eoN/cuYJiwZKiGrA93HLbugMIJmsskjsRZ6Tt5KjvaaZlNHZ6qa0AjSh5zz/FXB1AmKYW50PQhNbcnme4HgIp3T27PcGKvoOeWTSTdmCQgLfiKLRKgfdauXdgTyTfjATkBS3V95zvWRkW3DIliiplMxBxldX9noSyDqmxa2D68My+Wbr/IBiGE7OkxX0oh5BwTlXk9/p3fjm0fFEYz2PKiigC96y0oH6NVyxkY6SmjUJEm33TUX2blt5CIDQ5A917VDndFxb9AVWpuASwI8g/Wn+TXMVidz6K8+HlA9O33zveGLZ+rQmcMNCneBksH8ey/Qkbuf097CIyXVHBtC52ltszzm+WvONp1t9VYSHmVG3EGdR/VFb+OZz3qSQjjlnJRXiDbNuDGWmzuG0L4mM3lxCut9Q6AF0sDvQdxRoBs1AlHbjN3kXlgOsPmpKGScWSMrbY/of37EGGat7rJ0jlh9uN5TY9lR+lg7e9XV4IRrqJf7ucRN6hpQzWEYVmfYErpt7HBaVb4e8B+Li7NpgcAHqDcLoFUngrBGBY/nXcAYzpxf0g/8yBzIx1bVNt4nHMe9Y7shh4Bu+o5i6Sizftgp3LmZDPFOdxc3EHLK
+      mariadb-root-password: AgCxbxtfDy8WK8SYN7c/13Qdk13ggA5GKUewsOFxqaHy81Jsil0sgdPjEVmiBL6KbypgEF8pRqr1aby+Ax0/7ZTFvUuQI59d5I7eqxwAhbaxM2q1BF9Pkw1WK8Tt/2kI/mZrTBI2ibMJphnurY0CS8A3Wi5fbEkytIBcxSTZY+sl7ab6rTVO3nXTi8zSXOp3E1FHKTj6+kzDJy98ojyAAcJTMlbC80Gky8tepTPEqCCwlJPc1QvwxRDKDP9jwAHYAeMQVljnA60Xs+ynO7uim+8SZxWzbeImq0bM+W7QrtPoGSUcorqli99en85VOzLvlkjNNOhwhknmL+mURryeUCS2DYgMqONnho0FlSqLZEQrbrnkFm/ghL/J8MKH64Z+zh3RS9cw0n6eW9u6AzP0R5iH3bpAGgYHSXEQMSR6bYoIUpswfv7ldN6Ge5WuAEjVf6yUMRZkUZmbreqRDeZwBN1A8m8Pn0g9IjRIOjSAeiWeMWIRMwLuP/jcK7r2hQzotV+Z3jhKyflzCik8LkM3f0esywkdqC4NK4reNeMMonicQ1oPLTdmHa9zEZvzaHt9ppPr3wA/B+/1bxIEbLgLmxsfzMg3qbnl5i4cj3QNrL+s6ImfESzxAvBUuBSG67F97HZQ8oaRMapi1bSyo3BI00k4B8O5wCFwG0vnoybBTB2J2FlyKIMShRQGrQscanpQGPJoHx5qbTMHacIk3NfGLcEAdwZ5jpV96xO6aNpO6yS+U8v4wH86Wuru
     template:
       metadata:
         creationTimestamp: null
         name: job-manager-mariadb
-        namespace: job-manager
+        namespace: alphasynthesis
       type: Opaque
+
 
 
 
@@ -96,7 +99,7 @@ config:
     protocol: "https"
     ## API hostname. Must match the ingress.hostname value.
     hostName: "jobmgr.mmli1.ncsa.illinois.edu"
-    namespace: "job-manager"
+    namespace: "alphasynthesis"
   oauth:
     userInfoUrl: "http://oauth2-proxy.oauth2-proxy.svc.cluster.local/oauth2/userinfo"
   uws:
