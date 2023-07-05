@@ -25,6 +25,25 @@ hcaptcha:
     existingSecret: "hcaptcha"
 
 extraDeploy:
+# Private git repo credentials
+- apiVersion: bitnami.com/v1alpha1
+  kind: SealedSecret
+  metadata:
+    creationTimestamp: null
+    name: regcred
+    namespace: alphasynthesis
+  spec:
+    encryptedData:
+      .dockerconfigjson: AgBQddueOU5dNwWQO+TYBTHcQC05M+g4i/7Tv5QLnKG7YTv7gBeL1lETEUdm9G0T8cPmmYXolhddqYuHCK4sk4GYHEFQmpGNbUr9xxIhmf/f8KR9l395sGD/JVlAldnjXgsyMjDDqBzJ3oxf2wYSKbdArZ0sSbIybh799ob7g2sKK+D5QuTIH9mW7+cftkVcru9dOVSQ93mEbZdJGQaQ9N051CiZwAjnNNj/Go/57LZs0+KTfepRkwZH4CN10NPJVKGJ7M3m1VGFSHLdCBnfszUrJmSYJrqdggS7cRJlXy/03c1vk8UUwADuY6gPAZ0L3xH7O/EKNhY3qOj7pGS4zFI8W01QxJPcDDwPuej6AJWzCW6ooKhDqcTyqWKnfPty84iK1yWW2pGhS0HW1jKdkzr6s0eWzLOjkwseuEeOEqHfduGWqX91qx97FTXi0AGWLjwhzbaGG9+qd3xeLcYXcv2s02GnMdxuvOLBr2lRP5A1gvPbK4DzPA+DLP5VSd1hH8Mz8zoZ4VKMeDyJertYczHQwNvAxn6rVI0G+TawzqPwDAqhJDoKzSWptV0Ja8LM3sdkvxQLN5ZH9AMLJyibltR1jNQLSUCrMgWkYuBchMJ/xXccRJcSmuMhxQdRIeSDSVRlmuA94HxsUN7Bh3Fo5/n3u/KIW79H7QrojSPoS23xpCN/f8FDGN/3S3WcJLXojoLWDDaN5Gic96l9Zxsw9CkYmtZLoHCInwR0LKE/Bt4OVPHafDsJnPadMbr6eD2rd3beNbKP/YrF7YU6ccbbixYIjh6C1aPMrlD3iy2Hfw/7VLlb+QBQ1K3JvAxt0F9Nc1sxcbVsCabG5Q82Csil4OCmh54DDyKDfj+AnH+ZO+ZtSOfOPvsJNmTerFYzjmCgulJPcK5x/9K6U0yhDv1J5+ZeGDQYuctchFWtLVTbceZLuaxE
+    template:
+      metadata:
+        creationTimestamp: null
+        name: regcred
+        namespace: alphasynthesis
+      type: kubernetes.io/dockerconfigjson
+
+
+
 # Enable DecentCI backups
 - apiVersion: v1
   kind: ConfigMap
@@ -103,6 +122,8 @@ config:
   oauth:
     userInfoUrl: "http://oauth2-proxy.oauth2-proxy.svc.cluster.local/oauth2/userinfo"
   uws:
+    imagePullSecret: "regcred"
+
     ## Server working directory to store generated job data
     workingVolume:
       claimName: "mmli-clean-job-weights"
