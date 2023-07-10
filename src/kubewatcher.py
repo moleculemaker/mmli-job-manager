@@ -128,16 +128,16 @@ class KubeEventWatcher:
                     conditions = status.conditions
 
                     # Calculate new status
-                    self.logger.debug(f'Event: job_id={job_id}   type={type}   status={status}')
+                    self.logger.verbose(f'Event: job_id={job_id}   type={type}   status={status}')
                     new_phase = None
-                    if type == 'MODIFIED' and conditions is None:
+                    if conditions is None:
                         new_phase = 'executing'
-                    elif type == 'MODIFIED' and len(conditions) > 0 and conditions[0].type == 'Complete':
+                    elif len(conditions) > 0 and conditions[0].type == 'Complete':
                         new_phase = 'completed'
-                    elif type == 'MODIFIED' and status.failed > 0:
+                    elif status.failed > 0:
                         new_phase = 'error'
                     else:
-                        self.logger.debug(f'>> Skipped job update: {job_id}-> {new_phase}')
+                        self.logger.info(f'>> Skipped job update: {job_id}-> {new_phase}')
                         self.logger.debug(f'>> Status: {str(status)}')
 
                     # Write status update back to database
@@ -147,7 +147,7 @@ class KubeEventWatcher:
                             job_id=job_id,
                             phase=new_phase,
                         )
-                        self.logger.debug('Updated job phase: %s -> %s' % (job_id, new_phase))
+                        self.logger.info('Updated job phase: %s -> %s' % (job_id, new_phase))
             except urllib3.exceptions.ProtocolError as e:
                 self.logger.error('KubeWatcher reconnecting to Kube API: %s' % str(e))
                 if k8s_event_stream:
