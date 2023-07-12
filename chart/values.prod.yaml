@@ -48,7 +48,7 @@ extraDeploy:
 - apiVersion: v1
   kind: ConfigMap
   metadata:
-    name: backups
+    name: job-manager-backups
     namespace: alphasynthesis
     labels:  
       app.kubernetes.io/name: decentci-backups

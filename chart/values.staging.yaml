@@ -98,7 +98,7 @@ extraDeploy:
 - apiVersion: v1
   kind: ConfigMap
   metadata:
-    name: backups
+    name: job-manager-staging-backups
     namespace: staging
     labels:
       app.kubernetes.io/name: decentci-backups
