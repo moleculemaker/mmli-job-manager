@@ -265,7 +265,7 @@ def create_job(image_name, command=None, job_id=None, run_id=None, owner_id=None
             activeDeadlineSeconds=config['uws']['job']['activeDeadlineSeconds'],
             monitorEnabled=config['uws']['job']['monitorEnabled'],
         ))
-        log.debug("Job {}:\n{}".format(job_name, yaml.dump(job_body, indent=2)))
+        #log.debug("Job {}:\n{}".format(job_name, yaml.dump(job_body, indent=2)))
         api_response = api_batch_v1.create_namespaced_job(
             namespace=namespace, body=job_body
         )
