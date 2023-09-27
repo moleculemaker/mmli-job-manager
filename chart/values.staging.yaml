@@ -92,6 +92,7 @@ extraDeploy:
 
       # Local: for local testing pointed at staging
       - 'http://localhost:4200'	
+      - 'http://chemscraper.proxy.localhost'
       - 'http://test.mydomain.com'
 
 # Enable DecentCI backups
