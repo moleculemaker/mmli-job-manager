@@ -5,7 +5,7 @@ ingress:
     cert-manager.io/cluster-issuer: letsencrypt-production
     kubernetes.io/tls-acme: "true"
     traefik.ingress.kubernetes.io/router.tls: "true"
-    traefik.ingress.kubernetes.io/router.middlewares: oauth2-proxy-cors-header@kubernetescrd,oauth2-proxy-ip-ratelimit@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: oauth2-proxy-cors-header@kubernetescrd,alphasynthesis-jobmgr-submit-ip-ratelimit@kubernetescrd
 
 persistence:
   existingClaim: "mmli-clean-job-weights"
@@ -25,6 +25,16 @@ hcaptcha:
     existingSecret: "hcaptcha"
 
 extraDeploy:
+# IP ratelimiting for prod JobMgr
+- apiVersion: traefik.containo.us/v1alpha1
+  kind: Middleware
+  metadata:
+    name: jobmgr-submit-ip-ratelimit
+  spec:
+    rateLimit:
+      average: 20
+      period: 500s
+
 # Private git repo credentials
 - apiVersion: bitnami.com/v1alpha1
   kind: SealedSecret
