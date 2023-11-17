@@ -3,6 +3,11 @@ ingress:
   tls: false
   annotations: {}
 
+jobSubmitIngress:
+  hostname: jobmgr.proxy.localhost
+  tls: false
+  annotations: {}
+
 controller:
   image: moleculemaker/mmli-job-manager:main
 

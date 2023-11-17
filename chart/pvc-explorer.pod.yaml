@@ -15,11 +15,9 @@ spec:
   volumes:
     - name: data
       persistentVolumeClaim:
+        # prodi / staging / localdev
+        claimName: mmli-clean-job-weights
+
         # local dev
         # claimName: job-manager-pvc
         
-        # prod
-        # claimName: mmli-clean-job-weights
-
-        # staging
-        claimName: mmli-clean-job-weights

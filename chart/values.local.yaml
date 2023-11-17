@@ -1,12 +1,24 @@
 ingress:
-  ingressClassName: nginx
+  #ingressClassName: nginx
+  ingressClassName: traefik
   hostname: jobmgr.proxy.localhost
-  tls: true
+  tls: false
   annotations:
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/cors-allow-origin: "https://clean.proxy.localhost,https://molli.proxy.localhost,http://localhost:4200"
     nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: mmli-cors-header@kubernetescrd
 
+jobSubmitIngress:
+  #ingressClassName: nginx
+  ingressClassName: traefik
+  hostname: jobmgr.proxy.localhost
+  tls: false
+  annotations:
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://clean.proxy.localhost,https://molli.proxy.localhost,http://localhost:4200"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: mmli-cors-header@kubernetescrd,mmli-ip-ratelimit@kubernetescrd
 
 persistence:
   existingClaim: "mmli-clean-job-weights"  # use locally mounted data instead
@@ -15,7 +27,7 @@ persistence:
   storageClassName: hostpath
 
   # EXPERIMENTAL: Set this to enable mounting a directory into this volume from host
-  # hostpath: /Users/lambert8/workspace/mmli/mmli-job-manager/data
+  #hostpath: /Users/lambert8/workspace/mmli/mmli-job-manager/data
 
 
 controller:
@@ -41,7 +53,7 @@ config:
   hcaptcha:
     secret: "ChangeThisInProduction"
   oauth:
-    userInfoUrl: "http://oauth2-proxy.oauth2-proxy.svc.cluster.local/oauth2/userinfo"
+    userInfoUrl: "http://oauth2-proxy.mmli.svc.cluster.local/oauth2/userinfo"
   uws:
     imagePullSecret: "regcred"
     ## Server working directory to store generated job data

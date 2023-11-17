@@ -2,7 +2,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: jobs-api
+  name: {{ .Release.Name }}
 {{- with .Values.ingress.annotations }}
   annotations:
   {{- toYaml . | nindent 4 }}
@@ -27,4 +27,35 @@ spec:
             port:
               number: 8888
         path: /
+        pathType: ImplementationSpecific
+---
+# Enables us to add additional annotations to the /job/submit endpoint  (e.g. ratelimiting)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-submit-endpoint
+{{- with .Values.jobSubmitIngress.annotations }}
+  annotations:
+  {{- toYaml . | nindent 4 }}
+{{- end }}
+spec:
+{{- if .Values.jobSubmitIngress.tls }}
+  tls:
+  - hosts:
+    - {{ .Values.jobSubmitIngress.hostname }}
+    secretName: {{ .Values.jobSubmitIngress.hostname }}-tls
+{{- end }}
+{{- if .Values.jobSubmitIngress.ingressClassName }}
+  ingressClassName: {{ .Values.jobSubmitIngress.ingressClassName }}
+{{- end }}
+  rules:
+  - host: {{ .Values.jobSubmitIngress.hostname | required "required: jobSubmitIngress.hostname (e.g. jobs.localhost)" }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ .Release.Name }}
+            port:
+              number: 8888
+        path: /api/v1/job/submit
         pathType: ImplementationSpecific
