@@ -8,14 +8,13 @@ ingress:
     traefik.ingress.kubernetes.io/router.middlewares: staging-cors-header@kubernetescrd
 
 jobSubmitIngress:
-  #ingressClassName: nginx
   ingressClassName: traefik
-  hostname: jobmgr.proxy.localhost
-  tls: false
+  hostname: jobmgr.staging.mmli1.ncsa.illinois.edu
+  tls: true
   annotations:
-    nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://clean.proxy.localhost,https://molli.proxy.localhost,http://localhost:4200"
-    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    kubernetes.io/tls-acme: "true"
+    traefik.ingress.kubernetes.io/router.tls: "true"
     traefik.ingress.kubernetes.io/router.middlewares: staging-cors-header@kubernetescrd,staging-jobmgr-submit-ip-ratelimit@kubernetescrd
 
 

@@ -5,6 +5,16 @@ ingress:
     cert-manager.io/cluster-issuer: letsencrypt-production
     kubernetes.io/tls-acme: "true"
     traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: oauth2-proxy-cors-header@kubernetescrd
+
+jobSubmitIngress:
+  ingressClassName: traefik
+  hostname: jobmgr.mmli1.ncsa.illinois.edu
+  tls: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    kubernetes.io/tls-acme: "true"
+    traefik.ingress.kubernetes.io/router.tls: "true"
     traefik.ingress.kubernetes.io/router.middlewares: oauth2-proxy-cors-header@kubernetescrd,alphasynthesis-jobmgr-submit-ip-ratelimit@kubernetescrd
 
 persistence:
