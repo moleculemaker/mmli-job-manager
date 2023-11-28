@@ -1,8 +1,10 @@
+# General ingress for all endpoints (except /api/v1/job/submit)
 ingress:
   hostname: jobmgr.proxy.localhost
   tls: false
   annotations: {}
-
+  
+# Custom ingress configuration for only /api/v1/job/submit endpoint
 jobSubmitIngress:
   hostname: jobmgr.proxy.localhost
   tls: false
