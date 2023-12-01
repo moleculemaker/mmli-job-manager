@@ -42,8 +42,8 @@ extraDeploy:
     name: jobmgr-submit-ip-ratelimit
   spec:
     rateLimit:
-      average: 20
-      period: 500s
+      average: 4
+      period: 120s
 
 # Private git repo credentials
 - apiVersion: bitnami.com/v1alpha1
