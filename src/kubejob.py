@@ -1,3 +1,5 @@
+import sys
+
 import global_vars
 from global_vars import config, log
 from kubernetes import client, config as kubeconfig
@@ -13,12 +15,22 @@ import base64
 
 ## Load Kubernetes cluster config. Unhandled exception if not in Kubernetes environment.
 try:
-    kubeconfig.load_kube_config(config_file=config['server']['kubeconfig'])
-except:
     kubeconfig.load_incluster_config()
-configuration = client.Configuration()
-api_batch_v1 = client.BatchV1Api(client.ApiClient(configuration))
-api_v1 = client.CoreV1Api(client.ApiClient(configuration))
+    log.info('Successfully loaded in-cluster config!')
+except Exception as e1:
+    log.error('In-cluster config failed: ', e1)
+    config_file_path = config['server']['kubeconfig']
+    log.info('Falling back to provided kubeconfig path: ', config_file_path)
+    try:
+        kubeconfig.load_kube_config(config_file=config_file_path)
+    except Exception as e2:
+        log.fatal('Failed to get any cluster config: ', e2)
+        sys.exit(1)
+#configuration = client.Configuration()
+#api_batch_v1 = client.BatchV1Api(client.ApiClient(configuration))
+#api_v1 = client.CoreV1Api(client.ApiClient(configuration))
+api_batch_v1 = client.BatchV1Api()
+api_v1 = client.CoreV1Api()
 
 def get_namespace():
     # When running in a pod, the namespace should be determined automatically,
