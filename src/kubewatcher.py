@@ -73,8 +73,8 @@ class KubeEventWatcher:
                 # Resource version is used to keep track of stream progress (in case of resume)
                 k8s_event_stream = w.stream(func=kubejob.api_batch_v1.list_namespaced_job,
                                             namespace=kubejob.get_namespace(),
-                                            timeout_seconds=timeout_seconds,
-                                            resource_version=resource_version)
+                                            #resource_version=resource_version,
+                                            timeout_seconds=timeout_seconds)
 
                 self.logger.info('KubeWatcher connected!')
 
