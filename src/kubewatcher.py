@@ -74,7 +74,7 @@ class KubeEventWatcher:
             try:
                 # List all pods in watched namespace to get resource_version
                 namespaced_jobs: V1JobList = kubejob.api_batch_v1.list_namespaced_job(namespace=kubejob.get_namespace())
-                resource_version = namespaced_jobs.metadata['resource_version'] if 'resource_version' in namespaced_jobs.metadata else resource_version
+                resource_version = namespaced_jobs.metadata.resource_version if namespaced_jobs.metadata.resource_version else resource_version
 
                 # Then, watch for new events using the most recent resource_version
                 # Resource version is used to keep track of stream progress (in case of resume/retry)
