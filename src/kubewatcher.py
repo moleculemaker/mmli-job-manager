@@ -62,6 +62,7 @@ class KubeEventWatcher:
         self.logger.info('KubeWatcher looking for required labels: ' + str(required_labels))
 
         timeout_seconds = 0
+        resource_version = ''
         k8s_event_stream = None
 
         w = watch.Watch()
@@ -72,7 +73,7 @@ class KubeEventWatcher:
             try:
                 # List all pods in watched namespace to get resource_version
                 namespaced_jobs = kubejob.api_batch_v1.list_namespaced_job(namespace=kubejob.get_namespace())
-                resource_version = namespaced_jobs['metadata']['resource_version'] if 'metadata' in namespaced_jobs and 'resource_version' in namespaced_jobs['metadata'] else ''
+                resource_version = namespaced_jobs['metadata']['resource_version'] if 'metadata' in namespaced_jobs and 'resource_version' in namespaced_jobs['metadata'] else resource_version
 
                 # Then, watch for new events using the most recent resource_version
                 # Resource version is used to keep track of stream progress (in case of resume/retry)
@@ -152,7 +153,7 @@ class KubeEventWatcher:
                 k8s_event_stream = None
                 if e.status == 410:
                     # Resource too old
-                    resource_version = None
+                    resource_version = ''
                     self.logger.warning("Resource too old (410) - reconnecting: " + str(e))
                 time.sleep(2)
                 continue
