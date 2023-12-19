@@ -1,3 +1,4 @@
+import json
 import time
 import threading
 
@@ -61,7 +62,6 @@ class KubeEventWatcher:
         self.logger.info('KubeWatcher looking for required labels: ' + str(required_labels))
 
         timeout_seconds = 0
-        resource_version = ''
         k8s_event_stream = None
 
         w = watch.Watch()
@@ -70,10 +70,15 @@ class KubeEventWatcher:
             time.sleep(1)
             self.logger.info('KubeWatcher is connecting...')
             try:
-                # Resource version is used to keep track of stream progress (in case of resume)
+                # List all pods in watched namespace to get resource_version
+                namespaced_jobs = kubejob.api_batch_v1.list_namespaced_job(namespace=kubejob.get_namespace())
+                resource_version = namespaced_jobs['metadata']['resource_version'] if 'metadata' in namespaced_jobs and 'resource_version' in namespaced_jobs['metadata'] else ''
+
+                # Then, watch for new events using the most recent resource_version
+                # Resource version is used to keep track of stream progress (in case of resume/retry)
                 k8s_event_stream = w.stream(func=kubejob.api_batch_v1.list_namespaced_job,
                                             namespace=kubejob.get_namespace(),
-                                            #resource_version=resource_version,
+                                            resource_version=resource_version,
                                             timeout_seconds=timeout_seconds)
 
                 self.logger.info('KubeWatcher connected!')
