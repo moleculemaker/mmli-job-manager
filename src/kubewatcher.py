@@ -3,6 +3,7 @@ import time
 import threading
 
 from kubernetes import watch, config as kubeconfig
+from kubernetes.client import V1JobList
 from kubernetes.client.rest import ApiException
 from requests import HTTPError
 
@@ -72,8 +73,8 @@ class KubeEventWatcher:
             self.logger.info('KubeWatcher is connecting...')
             try:
                 # List all pods in watched namespace to get resource_version
-                namespaced_jobs = kubejob.api_batch_v1.list_namespaced_job(namespace=kubejob.get_namespace())
-                resource_version = namespaced_jobs['metadata']['resource_version'] if 'metadata' in namespaced_jobs and 'resource_version' in namespaced_jobs['metadata'] else resource_version
+                namespaced_jobs: V1JobList = kubejob.api_batch_v1.list_namespaced_job(namespace=kubejob.get_namespace())
+                resource_version = namespaced_jobs.metadata['resource_version'] if 'resource_version' in namespaced_jobs.metadata else resource_version
 
                 # Then, watch for new events using the most recent resource_version
                 # Resource version is used to keep track of stream progress (in case of resume/retry)
