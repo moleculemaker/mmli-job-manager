@@ -1,7 +1,9 @@
+import json
 import time
 import threading
 
 from kubernetes import watch, config as kubeconfig
+from kubernetes.client import V1JobList
 from kubernetes.client.rest import ApiException
 from requests import HTTPError
 
@@ -70,11 +72,16 @@ class KubeEventWatcher:
             time.sleep(1)
             self.logger.info('KubeWatcher is connecting...')
             try:
-                # Resource version is used to keep track of stream progress (in case of resume)
+                # List all pods in watched namespace to get resource_version
+                namespaced_jobs: V1JobList = kubejob.api_batch_v1.list_namespaced_job(namespace=kubejob.get_namespace())
+                resource_version = namespaced_jobs.metadata.resource_version if namespaced_jobs.metadata.resource_version else resource_version
+
+                # Then, watch for new events using the most recent resource_version
+                # Resource version is used to keep track of stream progress (in case of resume/retry)
                 k8s_event_stream = w.stream(func=kubejob.api_batch_v1.list_namespaced_job,
                                             namespace=kubejob.get_namespace(),
-                                            timeout_seconds=timeout_seconds,
-                                            resource_version=resource_version)
+                                            resource_version=resource_version,
+                                            timeout_seconds=timeout_seconds)
 
                 self.logger.info('KubeWatcher connected!')
 
@@ -147,7 +154,7 @@ class KubeEventWatcher:
                 k8s_event_stream = None
                 if e.status == 410:
                     # Resource too old
-                    resource_version = None
+                    resource_version = ''
                     self.logger.warning("Resource too old (410) - reconnecting: " + str(e))
                 time.sleep(2)
                 continue

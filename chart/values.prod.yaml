@@ -1,5 +1,5 @@
 ingress:
-  hostname: jobmgr.mmli1.ncsa.illinois.edu
+  hostname: jobmgr.platform.moleculemaker.org
   tls: true
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-production
@@ -117,7 +117,8 @@ config:
   server:
     protocol: "https"
     ## API hostname. Must match the ingress.hostname value.
-    hostName: "jobmgr.mmli1.ncsa.illinois.edu"
+    ## Suffix must match CLEAN + MOLLI prod for user auth to work
+    hostName: "jobmgr.platform.moleculemaker.org"
     namespace: "alphasynthesis"
   oauth:
     userInfoUrl: "http://oauth2-proxy.oauth2-proxy.svc.cluster.local/oauth2/userinfo"
