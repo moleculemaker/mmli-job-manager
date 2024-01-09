@@ -15,7 +15,7 @@ spec:
   volumes:
     - name: data
       persistentVolumeClaim:
-        # prodi / staging / localdev
+        # prod / staging / localdev
         claimName: mmli-clean-job-weights
 
         # local dev
