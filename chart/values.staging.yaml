@@ -46,55 +46,6 @@ extraDeploy:
       type: kubernetes.io/dockerconfigjson
 
 
-
-# Deploy CORS middleware for staging namespace
-- apiVersion: traefik.containo.us/v1alpha1
-  kind: Middleware
-  metadata:
-    name: cors-header
-    namespace: staging
-  spec:
-    headers:
-      accessControlAllowCredentials: true
-      accessControlAllowHeaders:
-      - Origin
-      - X-Requested-With
-      - Content-Type
-      - content-type
-      - Accept
-      - Authorization
-      accessControlAllowMethods:
-      - GET
-      - OPTIONS
-      - PUT
-      - DELETE
-      - POST
-      accessControlAllowOriginList:
-      # Prod: chemscraper-frontend -> mmli-backend -> chemscraper-backend
-      - 'https://chemscraper.frontend.mmli1.ncsa.illinois.edu'
-      - 'https://mmli.fastapi.mmli1.ncsa.illinois.edu'	
-      - 'https://chemscraper.backend.mmli1.ncsa.illinois.edu'
-
-      # Prod: CLEAN / MOLLI -> JobMgr
-      - 'https://clean.frontend.mmli1.ncsa.illinois.edu'
-      - 'https://molli.frontend.mmli1.ncsa.illinois.edu'
-      - 'https://jobmgr.mmli1.ncsa.illinois.edu'
-
-      # Staging: chemscraper-frontend -> mmli-backend -> chemscraper-backend
-      - 'https://chemscraper.frontend.staging.mmli1.ncsa.illinois.edu'
-      - 'https://mmli.fastapi.staging.mmli1.ncsa.illinois.edu'
-      - 'https://chemscraper.backend.staging.mmli1.ncsa.illinois.edu'
-
-      # Staging: CLEAN / MOLLI -> JobMgr
-      - 'https://clean.frontend.staging.mmli1.ncsa.illinois.edu'
-      - 'https://molli.frontend.staging.mmli1.ncsa.illinois.edu'
-      - 'https://jobmgr.staging.mmli1.ncsa.illinois.edu'
-
-      # Local: for local testing pointed at staging
-      - 'http://localhost:4200'	
-      - 'http://chemscraper.proxy.localhost'
-      - 'http://test.mydomain.com'
-
 # Enable DecentCI backups
 - apiVersion: v1
   kind: ConfigMap
