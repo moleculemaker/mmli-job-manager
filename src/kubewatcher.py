@@ -149,14 +149,13 @@ class KubeEventWatcher:
                         self.logger.info('Updated job phase: %s -> %s' % (job_id, new_phase))
 
                     try:
-                        log.debug(f'''Querying job record "{job_id}"...''')
+                        self.logger.info(f'''Querying job record "{job_id}"...''')
                         job_query = self.db.select_job_records(job_id=job_id, hasEmailAddress=True)
                         if not job_query:
                             return
                         job = job_query[0]
                         if job['phase'] is None:
-                            log.warning('Skipping - no job phase found:', str(job))
-                            continue
+                            self.logger.warning('Skipping - no job phase found:', str(job))
                         if job['phase'] == "completed":
                             email_utils.send_email(job['email'],
                                                    f'''Result for your AlphaSynthesis Job ({job['job_id']}) is ready''',
@@ -167,7 +166,7 @@ class KubeEventWatcher:
                         ## Remove the email address from the job record to mark as sent
                         ##self.db.update_job(job_id=job_id, email='')
                     except Exception as e:
-                        log.error(f'''Error sending job completion email "{job_id}": {e}''')
+                        self.logger.error(f'''Error sending job completion email "{job_id}": {e}''')
 
             except (ApiException, HTTPError) as e:
                 self.logger.error('HTTPError encountered - KubeWatcher reconnecting to Kube API: %s' % str(e))
