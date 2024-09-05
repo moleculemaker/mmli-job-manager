@@ -154,13 +154,16 @@ class KubeEventWatcher:
                         if not job_query:
                             return
                         job = job_query[0]
+                        if job['phase'] is None:
+                            log.warning('Skipping - no job phase found:', str(job))
+                            continue
                         if job['phase'] == "completed":
                             email_utils.send_email(job['email'],
-                                                   f'''Result for your CLEAN Job ({job['job_id']}) is ready''',
-                                                   f'''The result for your CLEAN Job is available at {APPCONFIG['baseUrl']}/results/{job['job_id']}/1''')
+                                                   f'''Result for your AlphaSynthesis Job ({job['job_id']}) is ready''',
+                                                   f'''The result for your AlphaSynthesis Job is available at /results/{job['job_id']}/1''')
                         else:
-                            email_utils.send_email(job['email'], f'''CLEAN Job {job['job_id']} failed''',
-                                                   f'''An error occurred in computing the result for your CLEAN job.''')
+                            email_utils.send_email(job['email'], f'''AlphaSynthesis Job {job['job_id']} failed''',
+                                                   f'''An error occurred in computing the result for your AlphaSynthesis job.''')
                         ## Remove the email address from the job record to mark as sent
                         ##self.db.update_job(job_id=job_id, email='')
                     except Exception as e:
