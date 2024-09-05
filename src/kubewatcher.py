@@ -10,6 +10,7 @@ from requests import HTTPError
 from dbconnector import DbConnector
 from global_vars import config, log
 import kubejob
+from src import email_utils
 
 
 # watched_namespaces = ["test"]
@@ -146,6 +147,24 @@ class KubeEventWatcher:
                             phase=new_phase,
                         )
                         self.logger.info('Updated job phase: %s -> %s' % (job_id, new_phase))
+
+                    try:
+                        log.debug(f'''Querying job record "{job_id}"...''')
+                        job_query = self.db.select_job_records(job_id=job_id, hasEmailAddress=True)
+                        if not job_query:
+                            return
+                        job = job_query[0]
+                        if job['phase'] == "completed":
+                            email_utils.send_email(job['email'],
+                                                   f'''Result for your CLEAN Job ({job['job_id']}) is ready''',
+                                                   f'''The result for your CLEAN Job is available at {APPCONFIG['baseUrl']}/results/{job['job_id']}/1''')
+                        else:
+                            email_utils.send_email(job['email'], f'''CLEAN Job {job['job_id']} failed''',
+                                                   f'''An error occurred in computing the result for your CLEAN job.''')
+                        ## Remove the email address from the job record to mark as sent
+                        ##self.db.update_job(job_id=job_id, email='')
+                    except Exception as e:
+                        log.error(f'''Error sending job completion email "{job_id}": {e}''')
 
             except (ApiException, HTTPError) as e:
                 self.logger.error('HTTPError encountered - KubeWatcher reconnecting to Kube API: %s' % str(e))
