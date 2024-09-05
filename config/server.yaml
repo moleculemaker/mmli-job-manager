@@ -21,9 +21,9 @@ oauth:
   userInfoUrl: "http://oauth2.proxy.local/oauth2/userinfo"
   cookieName: "_oauth2_proxy"
 email:
-  server: "smtp.ncsa.uiuc.edu"
-  fromEmail: "devnull+clean@ncsa.illinois.edu"
-  fromName: "no-reply-CLEAN"
+  server: "outbound-relays.techservices.illinois.edu"
+  fromEmail: "no-reply@illinois.edu"
+  fromName: "no-reply-AlphaSynthesis"
 
 clean:
   job:
