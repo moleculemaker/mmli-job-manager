@@ -10,7 +10,7 @@ from requests import HTTPError
 from dbconnector import DbConnector
 from global_vars import config, log
 import kubejob
-from src import email_utils
+import email_utils
 
 
 # watched_namespaces = ["test"]
