@@ -5,5 +5,5 @@ version: 1.0.0
 dependencies:
 - name: mariadb
   version: ~11.5.3
-  repository: "https://charts.bitnami.com/bitnami"
+  repository: "https://raw.githubusercontent.com/bitnami/charts/archive-full-index/bitnami"
   condition: mariadb.enabled
